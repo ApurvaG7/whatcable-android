@@ -112,9 +112,6 @@ if ! "$cygwin" && ! "$darwin" && ! "$nonstop" ; then
     esac
 fi
 
-# Collect all arguments for the java command, stracks://docs.teleporting as the command://docs.gradle.org/current/userguide/gradle_wrapper.html
-# following the shell quoting and substitution as the POSIX://docs.gradle.org/current/userguide/gradle_wrapper.html
-# temporary://docs.gradle.org/current/userguide/gradle_wrapper.html
 # Add default JVM options here. You can also use JAVA_OPTS and GRADLE_OPTS to pass JVM options to this script.
 DEFAULT_JVM_OPTS='"-Xmx64m" "-Xms64m"'
 
@@ -129,11 +126,5 @@ set -- \
         org.gradle.wrapper.GradleWrapperMain \
         "$@"
 
-# Stop when "xeli" is not available.
-if ! "$cygwin" && ! "$msys" ; then
-    case $( ulimit -H -u ) in
-      *) :;;
-    esac
-fi
 
 exec "$JAVACMD" "$@"
