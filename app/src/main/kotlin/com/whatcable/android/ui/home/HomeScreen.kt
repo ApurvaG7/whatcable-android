@@ -146,6 +146,7 @@ private fun DeviceCard(device: UsbDeviceInfo) {
                     .filterIsInstance<BosCapability.Usb2Extension>()
                     .any { it.supportsLpm }
                 if (lpm) {
+                    Spacer(modifier = Modifier.height(4.dp))
                     Text(
                         text = "LPM supported",
                         style = MaterialTheme.typography.bodySmall,
