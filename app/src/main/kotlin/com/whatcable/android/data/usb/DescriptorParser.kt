@@ -3,6 +3,7 @@ package com.whatcable.android.data.usb
 import android.hardware.usb.UsbConstants
 import android.hardware.usb.UsbDevice
 import android.hardware.usb.UsbDeviceConnection
+import com.whatcable.android.core.model.BillboardDescriptor
 import com.whatcable.android.core.model.BosDescriptor
 import com.whatcable.android.core.model.EndpointDirection
 import com.whatcable.android.core.model.EndpointType
@@ -13,7 +14,12 @@ import com.whatcable.android.core.model.UsbInterfaceInfo
 
 object DescriptorParser {
 
-    fun parse(device: UsbDevice, connection: UsbDeviceConnection?, bosDescriptor: BosDescriptor? = null): UsbDeviceInfo {
+    fun parse(
+        device: UsbDevice,
+        connection: UsbDeviceConnection?,
+        bosDescriptor: BosDescriptor? = null,
+        billboardDescriptor: BillboardDescriptor? = null
+    ): UsbDeviceInfo {
         val rawDescriptors = connection?.rawDescriptors
         val usbVersion = rawDescriptors?.let { parseUsbVersion(it) }
         val deviceVersion = rawDescriptors?.let { parseDeviceVersion(it) }
@@ -74,7 +80,8 @@ object DescriptorParser {
             usbVersion = usbVersion,
             deviceVersion = deviceVersion,
             configurations = configurations,
-            bosDescriptor = bosDescriptor
+            bosDescriptor = bosDescriptor,
+            billboardDescriptor = billboardDescriptor
         )
     }
 

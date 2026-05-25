@@ -23,7 +23,8 @@ import javax.inject.Singleton
 class UsbHostScanner @Inject constructor(
     @ApplicationContext private val context: Context,
     private val usbManager: UsbManager,
-    private val bosReader: BosReader
+    private val bosReader: BosReader,
+    private val billboardParser: BillboardParser
 ) {
     companion object {
         const val ACTION_USB_PERMISSION = "com.whatcable.android.USB_PERMISSION"
@@ -42,7 +43,10 @@ class UsbHostScanner @Inject constructor(
             }
             try {
                 val bos = connection?.let { bosReader.read(it) }
-                DescriptorParser.parse(device, connection, bos)
+                val billboard = if (billboardParser.isBillboardDevice(device) && bos != null) {
+                    billboardParser.parse(bos)
+                } else null
+                DescriptorParser.parse(device, connection, bos, billboard)
             } finally {
                 connection?.close()
             }

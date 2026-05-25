@@ -25,6 +25,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.whatcable.android.core.model.AltModeStatus
 import com.whatcable.android.core.model.BosCapability
 import com.whatcable.android.core.model.UsbDeviceInfo
 
@@ -153,16 +154,37 @@ private fun DeviceCard(device: UsbDeviceInfo) {
                 }
             }
 
-            val billboardInterfaces = device.configurations
-                .flatMap { it.interfaces }
-                .filter { it.isBillboard }
-            if (billboardInterfaces.isNotEmpty()) {
-                Spacer(modifier = Modifier.height(4.dp))
+            device.billboardDescriptor?.let { billboard ->
+                Spacer(modifier = Modifier.height(8.dp))
                 Text(
-                    text = "Billboard device detected",
+                    text = "Alt Modes (Billboard)",
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.primary
                 )
+                billboard.altModes.forEach { altMode ->
+                    val statusColor = when (altMode.status) {
+                        AltModeStatus.CONFIGURATION_SUCCESSFUL -> MaterialTheme.colorScheme.primary
+                        AltModeStatus.CONFIGURATION_FAILED -> MaterialTheme.colorScheme.error
+                        else -> MaterialTheme.colorScheme.onSurfaceVariant
+                    }
+                    Text(
+                        text = "${altMode.svidLabel}: ${altMode.status.label}",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = statusColor
+                    )
+                }
+            } ?: run {
+                val billboardInterfaces = device.configurations
+                    .flatMap { it.interfaces }
+                    .filter { it.isBillboard }
+                if (billboardInterfaces.isNotEmpty()) {
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = "Billboard device (grant permission for details)",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                }
             }
 
             Spacer(modifier = Modifier.height(8.dp))
