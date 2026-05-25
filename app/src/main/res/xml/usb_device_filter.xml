@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Match all USB devices so we can inspect any cable/accessory -->
+    <usb-device />
+</resources>
