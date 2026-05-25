@@ -25,8 +25,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.whatcable.android.core.model.BosCapability
 import com.whatcable.android.core.model.UsbDeviceInfo
-import com.whatcable.android.core.model.UsbInterfaceInfo
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -129,6 +129,28 @@ private fun DeviceCard(device: UsbDeviceInfo) {
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
+            }
+
+            device.maxSpeed?.let { speed ->
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = "Max speed: ${speed.label} (${speed.gbps} Gbps)",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.primary
+                )
+            }
+
+            device.bosDescriptor?.let { bos ->
+                val lpm = bos.capabilities
+                    .filterIsInstance<BosCapability.Usb2Extension>()
+                    .any { it.supportsLpm }
+                if (lpm) {
+                    Text(
+                        text = "LPM supported",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
             }
 
             val billboardInterfaces = device.configurations

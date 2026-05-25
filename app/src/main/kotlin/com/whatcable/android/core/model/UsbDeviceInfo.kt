@@ -12,11 +12,13 @@ data class UsbDeviceInfo(
     val deviceProtocol: Int,
     val usbVersion: String?,
     val deviceVersion: String?,
-    val configurations: List<UsbConfigInfo>
+    val configurations: List<UsbConfigInfo>,
+    val bosDescriptor: BosDescriptor? = null
 ) {
     val vendorIdHex: String get() = "0x%04X".format(vendorId)
     val productIdHex: String get() = "0x%04X".format(productId)
     val deviceClassLabel: String get() = usbClassLabel(deviceClass)
+    val maxSpeed: UsbSpeedTier? get() = bosDescriptor?.maxSpeed
 }
 
 data class UsbConfigInfo(
