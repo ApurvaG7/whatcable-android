@@ -98,6 +98,16 @@ class ShizukuUsbPortReader @Inject constructor() {
         }
     }
 
+    // Shizuku's shouldShowRequestPermissionRationale() returns true when "don't ask again" was selected
+    fun isPermissionPermanentlyDenied(): Boolean {
+        if (!binderReady) return false
+        return try {
+            Shizuku.shouldShowRequestPermissionRationale()
+        } catch (_: Exception) {
+            false
+        }
+    }
+
     suspend fun readPorts(): List<UsbPortInfo> = withContext(Dispatchers.IO) {
         val mgr = iUsbManager ?: return@withContext emptyList()
         try {

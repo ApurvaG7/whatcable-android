@@ -62,6 +62,7 @@ fun HomeScreen(
     onDeviceClick: (String) -> Unit = {},
     onShareReport: (String) -> Unit = {},
     onChargingClick: () -> Unit = {},
+    onShizukuSetup: () -> Unit = {},
     modifier: Modifier = Modifier,
     viewModel: HomeViewModel = hiltViewModel()
 ) {
@@ -78,7 +79,7 @@ fun HomeScreen(
             DashboardContent(
                 snapshot = uiState.snapshot,
                 shizukuState = uiState.shizukuState,
-                onRequestShizuku = { viewModel.requestShizukuPermission() },
+                onShizukuSetup = onShizukuSetup,
                 onDeviceClick = onDeviceClick,
                 onShareReport = onShareReport,
                 onChargingClick = onChargingClick
@@ -112,7 +113,7 @@ private fun EmptyState() {
 private fun DashboardContent(
     snapshot: CableSnapshot,
     shizukuState: ShizukuUsbPortReader.ShizukuState,
-    onRequestShizuku: () -> Unit,
+    onShizukuSetup: () -> Unit,
     onDeviceClick: (String) -> Unit,
     onShareReport: (String) -> Unit,
     onChargingClick: () -> Unit
@@ -164,7 +165,7 @@ private fun DashboardContent(
         }
 
         if (shizukuState != ShizukuUsbPortReader.ShizukuState.Ready) {
-            item { ShizukuPrompt(shizukuState, onRequestShizuku) }
+            item { ShizukuPrompt(shizukuState, onShizukuSetup) }
         }
 
         if (snapshot.connectedDevices.isNotEmpty()) {
@@ -532,7 +533,7 @@ private fun ConfidenceDot(confidence: Confidence) {
 @Composable
 private fun ShizukuPrompt(
     state: ShizukuUsbPortReader.ShizukuState,
-    onRequest: () -> Unit
+    onSetup: () -> Unit
 ) {
     OutlinedCard(modifier = Modifier.fillMaxWidth()) {
         Column(modifier = Modifier.padding(16.dp)) {
@@ -550,12 +551,9 @@ private fun ShizukuPrompt(
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
-            if (state == ShizukuUsbPortReader.ShizukuState.PermissionDenied ||
-                state == ShizukuUsbPortReader.ShizukuState.NotRunning) {
-                Spacer(modifier = Modifier.height(8.dp))
-                TextButton(onClick = onRequest) {
-                    Text("Enable Shizuku")
-                }
+            Spacer(modifier = Modifier.height(8.dp))
+            TextButton(onClick = onSetup) {
+                Text("Set up Shizuku")
             }
         }
     }

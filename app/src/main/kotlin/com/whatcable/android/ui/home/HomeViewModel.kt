@@ -57,10 +57,6 @@ class HomeViewModel @Inject constructor(
         }
     }
 
-    fun requestShizukuPermission() {
-        shizukuPortReader.requestPermission()
-    }
-
     private fun observeUsbEvents() {
         viewModelScope.launch {
             usbScanner.observeUsbEvents().collect { event ->

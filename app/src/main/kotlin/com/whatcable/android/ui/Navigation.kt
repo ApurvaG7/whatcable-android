@@ -12,6 +12,7 @@ import androidx.navigation.navArgument
 import com.whatcable.android.ui.charging.ChargingScreen
 import com.whatcable.android.ui.detail.DeviceDetailScreen
 import com.whatcable.android.ui.home.HomeScreen
+import com.whatcable.android.ui.shizuku.ShizukuSetupScreen
 import java.net.URLDecoder
 import java.net.URLEncoder
 
@@ -41,8 +42,13 @@ fun WhatCableNavHost(
                     }
                     context.startActivity(Intent.createChooser(intent, "Share cable report"))
                 },
-                onChargingClick = { navController.navigate("charging") }
+                onChargingClick = { navController.navigate("charging") },
+                onShizukuSetup = { navController.navigate("shizuku-setup") }
             )
+        }
+
+        composable("shizuku-setup") {
+            ShizukuSetupScreen(onBack = { navController.popBackStack() })
         }
 
         composable("charging") {
