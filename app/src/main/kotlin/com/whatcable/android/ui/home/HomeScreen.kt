@@ -18,9 +18,13 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedCard
@@ -43,6 +47,7 @@ import com.whatcable.android.core.model.ComplianceWarning
 import com.whatcable.android.core.model.UsbDeviceInfo
 import com.whatcable.android.data.shizuku.ShizukuUsbPortReader
 import com.whatcable.android.domain.AltModeInfo
+import com.whatcable.android.domain.CableReportGenerator
 import com.whatcable.android.domain.CableSnapshot
 import com.whatcable.android.domain.ChargingAssessment
 import com.whatcable.android.domain.Confidence
@@ -54,6 +59,8 @@ import com.whatcable.android.domain.TrustScore
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(
+    onDeviceClick: (String) -> Unit = {},
+    onShareReport: (String) -> Unit = {},
     modifier: Modifier = Modifier,
     viewModel: HomeViewModel = hiltViewModel()
 ) {
@@ -70,7 +77,9 @@ fun HomeScreen(
             DashboardContent(
                 snapshot = uiState.snapshot,
                 shizukuState = uiState.shizukuState,
-                onRequestShizuku = { viewModel.requestShizukuPermission() }
+                onRequestShizuku = { viewModel.requestShizukuPermission() },
+                onDeviceClick = onDeviceClick,
+                onShareReport = onShareReport
             )
         }
     }
@@ -101,7 +110,9 @@ private fun EmptyState() {
 private fun DashboardContent(
     snapshot: CableSnapshot,
     shizukuState: ShizukuUsbPortReader.ShizukuState,
-    onRequestShizuku: () -> Unit
+    onRequestShizuku: () -> Unit,
+    onDeviceClick: (String) -> Unit,
+    onShareReport: (String) -> Unit
 ) {
     LazyColumn(
         modifier = Modifier
@@ -110,7 +121,7 @@ private fun DashboardContent(
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         item {
-            HeaderRow(snapshot.capabilityTier)
+            HeaderRow(snapshot.capabilityTier, onShareReport = onShareReport, snapshot = snapshot)
         }
 
         item {
@@ -162,14 +173,18 @@ private fun DashboardContent(
                 )
             }
             items(snapshot.connectedDevices, key = { it.deviceName }) { device ->
-                DeviceCard(device)
+                DeviceCard(device, onClick = { onDeviceClick(device.deviceName) })
             }
         }
     }
 }
 
 @Composable
-private fun HeaderRow(tier: CapabilityTier) {
+private fun HeaderRow(
+    tier: CapabilityTier,
+    onShareReport: (String) -> Unit,
+    snapshot: CableSnapshot
+) {
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.SpaceBetween,
@@ -179,7 +194,20 @@ private fun HeaderRow(tier: CapabilityTier) {
             text = "WhatCable",
             style = MaterialTheme.typography.titleLarge
         )
-        TierBadge(tier)
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            if (snapshot.isConnected) {
+                IconButton(onClick = {
+                    val report = CableReportGenerator().generate(snapshot)
+                    onShareReport(report)
+                }) {
+                    Icon(Icons.Default.Share, contentDescription = "Share report")
+                }
+            }
+            TierBadge(tier)
+        }
     }
 }
 
@@ -531,8 +559,8 @@ private fun ShizukuPrompt(
 }
 
 @Composable
-private fun DeviceCard(device: UsbDeviceInfo) {
-    Card(modifier = Modifier.fillMaxWidth()) {
+private fun DeviceCard(device: UsbDeviceInfo, onClick: () -> Unit = {}) {
+    Card(onClick = onClick, modifier = Modifier.fillMaxWidth()) {
         Column(modifier = Modifier.padding(16.dp)) {
             Text(
                 text = device.productName ?: device.manufacturerName ?: "Unknown Device",
