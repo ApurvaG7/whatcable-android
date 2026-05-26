@@ -433,7 +433,7 @@ private fun TrustCard(trust: TrustScore) {
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     Text(
-                        text = if (signal.present) signal.description else signal.description,
+                        text = signal.description,
                         style = MaterialTheme.typography.bodySmall,
                         color = if (signal.present) {
                             MaterialTheme.colorScheme.primary
