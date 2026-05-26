@@ -76,8 +76,6 @@ class AltModeReader @Inject constructor(
         0xFF01 -> "DisplayPort"
         0x8087 -> "Thunderbolt"
         0x04B4 -> "Cypress"
-        0x8086 -> "Intel"
-        0x1D17 -> "MediaTek"
         0x2109 -> "VIA Labs"
         else -> "Vendor (0x${"%04X".format(svid)})"
     }

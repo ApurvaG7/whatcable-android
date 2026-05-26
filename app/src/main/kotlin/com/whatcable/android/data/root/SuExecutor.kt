@@ -19,11 +19,13 @@ class SuExecutor @Inject constructor() {
         val success: Boolean get() = exitCode == 0
     }
 
-    suspend fun execute(command: String, timeoutMs: Long = 5000): Result? {
+    suspend fun execute(vararg args: String, timeoutMs: Long = 5000): Result? {
+        if (args.isEmpty()) return null
         return withContext(Dispatchers.IO) {
             withTimeoutOrNull(timeoutMs) {
                 try {
-                    val process = ProcessBuilder("su", "-c", command)
+                    val command = listOf("su", "-c") + args.toList()
+                    val process = ProcessBuilder(command)
                         .redirectErrorStream(false)
                         .start()
 
@@ -42,12 +44,14 @@ class SuExecutor @Inject constructor() {
     }
 
     suspend fun readFile(path: String): String? {
-        val result = execute("cat $path") ?: return null
+        if (path.isBlank()) return null
+        val result = execute("cat", shellEscape(path), timeoutMs = 5000) ?: return null
         return if (result.success) result.stdout else null
     }
 
     suspend fun listDirectory(path: String): List<String> {
-        val result = execute("ls $path") ?: return emptyList()
+        if (path.isBlank()) return emptyList()
+        val result = execute("ls", shellEscape(path), timeoutMs = 5000) ?: return emptyList()
         if (!result.success) return emptyList()
         return result.stdout.lines().filter { it.isNotBlank() }
     }
@@ -55,5 +59,9 @@ class SuExecutor @Inject constructor() {
     suspend fun isAvailable(): Boolean {
         val result = execute("id", timeoutMs = 3000) ?: return false
         return result.success && result.stdout.contains("uid=0")
+    }
+
+    private fun shellEscape(input: String): String {
+        return "'" + input.replace("'", "'\\''") + "'"
     }
 }

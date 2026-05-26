@@ -93,24 +93,24 @@ class CableIdentityReader @Inject constructor(
 
     private fun parseCableType(vdo1: Long?): CableType {
         if (vdo1 == null) return CableType.UNKNOWN
-        // Bits 29:27 of product_type_vdo1 indicate cable type
-        val cableComp = ((vdo1 shr 27) and 0x07).toInt()
-        return when (cableComp) {
-            0 -> CableType.PASSIVE
-            1 -> CableType.ACTIVE
-            else -> CableType.UNKNOWN
-        }
+        // Cable type is determined by which VDO format the kernel exposes.
+        // Bit 27 in passive cable VDO1 is reserved (0), in active it indicates VDO version.
+        // Heuristic: if bit 27 is set, likely active cable VDO format.
+        val bit27 = ((vdo1 shr 27) and 0x01).toInt()
+        return if (bit27 == 0) CableType.PASSIVE else CableType.ACTIVE
     }
 
     private fun parseUsb4Support(vdo1: Long?): Boolean {
         if (vdo1 == null) return false
-        // Bit 24 in passive cable VDO indicates USB4 support
-        return ((vdo1 shr 24) and 0x01) == 1L
+        // USB PD spec: bits 2:0 = USB Highest Speed
+        // 011b = USB4 Gen 3, 010b = USB4 Gen 2
+        val speedBits = (vdo1 and 0x07).toInt()
+        return speedBits >= 2
     }
 
     private fun parseMaxCurrent(vdo1: Long?): Int? {
         if (vdo1 == null) return null
-        // Bits 6:5 indicate max current
+        // Bits 6:5 indicate max current capability
         val currentBits = ((vdo1 shr 5) and 0x03).toInt()
         return when (currentBits) {
             1 -> 3000 // 3A
@@ -120,7 +120,6 @@ class CableIdentityReader @Inject constructor(
     }
 
     private fun parseMaxSpeed(vdo1: Long?, usbCapability: String?): Double? {
-        // Prefer sysfs usb_capability if available
         usbCapability?.let { cap ->
             return when {
                 cap.contains("usb4-gen3") -> 40.0
@@ -134,12 +133,13 @@ class CableIdentityReader @Inject constructor(
         }
 
         if (vdo1 == null) return null
-        // Bits 2:0 indicate USB signaling support in cable VDO
+        // USB PD spec Table 6-42: bits 2:0 = USB Highest Speed
         val speedBits = (vdo1 and 0x07).toInt()
         return when (speedBits) {
-            1 -> 5.0   // Gen 1
-            2 -> 10.0  // Gen 2
-            3 -> 20.0  // Gen 2x2 / USB4 Gen 2
+            0 -> 5.0   // USB 3.2 Gen 1
+            1 -> 10.0  // USB 3.2 Gen 2
+            2 -> 20.0  // USB4 Gen 2
+            3 -> 40.0  // USB4 Gen 3
             else -> null
         }
     }

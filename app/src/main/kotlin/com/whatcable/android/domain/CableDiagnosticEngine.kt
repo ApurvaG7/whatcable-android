@@ -31,6 +31,7 @@ class CableDiagnosticEngine @Inject constructor(
     private val altModeReader: AltModeReader
 ) {
 
+    @Volatile
     private var rootAvailable: Boolean? = null
 
     suspend fun diagnose(): CableSnapshot = withContext(Dispatchers.IO) {
@@ -112,12 +113,12 @@ class CableDiagnosticEngine @Inject constructor(
             if (rootAvailable != true) return null
         }
 
-        val portState = typeCPortReader.readPort()
-        val identity = cableIdentityReader.readIdentity()
-        val partnerAltModes = altModeReader.readPartnerAltModes()
-        val cableAltModes = altModeReader.readCableAltModes()
+        val portState = try { typeCPortReader.readPort() } catch (_: Exception) { null }
+        val identity = try { cableIdentityReader.readIdentity() } catch (_: Exception) { null }
+        val partnerAltModes = try { altModeReader.readPartnerAltModes() } catch (_: Exception) { emptyList() }
+        val cableAltModes = try { altModeReader.readCableAltModes() } catch (_: Exception) { emptyList() }
 
-        if (portState == null && identity == null && partnerAltModes.isEmpty()) return null
+        if (portState == null && identity == null && partnerAltModes.isEmpty() && cableAltModes.isEmpty()) return null
 
         return RootData(
             portState = portState,
