@@ -3,13 +3,11 @@ package com.whatcable.android.ui.home
 import android.hardware.usb.UsbDevice
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.whatcable.android.core.model.CapabilityTier
-import com.whatcable.android.core.model.UsbDeviceInfo
-import com.whatcable.android.core.model.UsbPortInfo
-import com.whatcable.android.data.shizuku.ShizukuSetupHelper
 import com.whatcable.android.data.shizuku.ShizukuUsbPortReader
 import com.whatcable.android.data.usb.UsbEvent
 import com.whatcable.android.data.usb.UsbHostScanner
+import com.whatcable.android.domain.CableDiagnosticEngine
+import com.whatcable.android.domain.CableSnapshot
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -22,7 +20,7 @@ import javax.inject.Inject
 class HomeViewModel @Inject constructor(
     private val usbScanner: UsbHostScanner,
     private val shizukuPortReader: ShizukuUsbPortReader,
-    private val shizukuSetup: ShizukuSetupHelper
+    private val diagnosticEngine: CableDiagnosticEngine
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(HomeUiState())
@@ -43,16 +41,11 @@ class HomeViewModel @Inject constructor(
     fun refresh() {
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoading = true)
-            val devices = usbScanner.scan()
-            val ports = if (shizukuPortReader.hasPermission()) {
-                shizukuPortReader.readPorts()
-            } else emptyList()
-
+            val snapshot = diagnosticEngine.diagnose()
             _uiState.value = _uiState.value.copy(
-                devices = devices,
-                portInfo = ports,
-                isLoading = false,
-                capabilityTier = currentTier()
+                snapshot = snapshot,
+                shizukuState = shizukuPortReader.state.value,
+                isLoading = false
             )
         }
     }
@@ -66,13 +59,6 @@ class HomeViewModel @Inject constructor(
 
     fun requestShizukuPermission() {
         shizukuPortReader.requestPermission()
-    }
-
-    val isShizukuInstalled: Boolean get() = shizukuSetup.isShizukuInstalled
-
-    private fun currentTier(): CapabilityTier = when {
-        shizukuPortReader.hasPermission() -> CapabilityTier.ENHANCED
-        else -> CapabilityTier.BASIC
     }
 
     private fun observeUsbEvents() {
@@ -92,19 +78,14 @@ class HomeViewModel @Inject constructor(
                 if (state == ShizukuUsbPortReader.ShizukuState.Ready) {
                     refresh()
                 }
-                _uiState.value = _uiState.value.copy(
-                    shizukuState = state,
-                    capabilityTier = currentTier()
-                )
+                _uiState.value = _uiState.value.copy(shizukuState = state)
             }
         }
     }
 }
 
 data class HomeUiState(
-    val devices: List<UsbDeviceInfo> = emptyList(),
-    val portInfo: List<UsbPortInfo> = emptyList(),
-    val isLoading: Boolean = false,
-    val capabilityTier: CapabilityTier = CapabilityTier.BASIC,
-    val shizukuState: ShizukuUsbPortReader.ShizukuState = ShizukuUsbPortReader.ShizukuState.NotRunning
+    val snapshot: CableSnapshot = CableSnapshot(),
+    val shizukuState: ShizukuUsbPortReader.ShizukuState = ShizukuUsbPortReader.ShizukuState.NotRunning,
+    val isLoading: Boolean = false
 )
