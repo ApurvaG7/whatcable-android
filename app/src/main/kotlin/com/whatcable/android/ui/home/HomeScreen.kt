@@ -61,6 +61,7 @@ import com.whatcable.android.domain.TrustScore
 fun HomeScreen(
     onDeviceClick: (String) -> Unit = {},
     onShareReport: (String) -> Unit = {},
+    onChargingClick: () -> Unit = {},
     modifier: Modifier = Modifier,
     viewModel: HomeViewModel = hiltViewModel()
 ) {
@@ -79,7 +80,8 @@ fun HomeScreen(
                 shizukuState = uiState.shizukuState,
                 onRequestShizuku = { viewModel.requestShizukuPermission() },
                 onDeviceClick = onDeviceClick,
-                onShareReport = onShareReport
+                onShareReport = onShareReport,
+                onChargingClick = onChargingClick
             )
         }
     }
@@ -112,7 +114,8 @@ private fun DashboardContent(
     shizukuState: ShizukuUsbPortReader.ShizukuState,
     onRequestShizuku: () -> Unit,
     onDeviceClick: (String) -> Unit,
-    onShareReport: (String) -> Unit
+    onShareReport: (String) -> Unit,
+    onChargingClick: () -> Unit
 ) {
     LazyColumn(
         modifier = Modifier
@@ -145,7 +148,7 @@ private fun DashboardContent(
         }
 
         if (snapshot.charging.confidence != Confidence.NONE) {
-            item { ChargingCard(snapshot.charging) }
+            item { ChargingCard(snapshot.charging, onClick = onChargingClick) }
         }
 
         if (snapshot.altModes.isNotEmpty()) {
@@ -337,8 +340,8 @@ private fun SpeedCard(speed: SpeedClassification) {
 }
 
 @Composable
-private fun ChargingCard(charging: ChargingAssessment) {
-    Card(modifier = Modifier.fillMaxWidth()) {
+private fun ChargingCard(charging: ChargingAssessment, onClick: () -> Unit = {}) {
+    Card(onClick = onClick, modifier = Modifier.fillMaxWidth()) {
         Column(modifier = Modifier.padding(16.dp)) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
