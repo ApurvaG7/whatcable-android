@@ -1,7 +1,6 @@
 package com.whatcable.android.domain
 
 import com.whatcable.android.core.model.AltModeStatus
-import com.whatcable.android.core.model.BillboardAltMode
 import com.whatcable.android.core.model.CapabilityTier
 import com.whatcable.android.core.model.ComplianceWarning
 import com.whatcable.android.core.model.DataRole
@@ -11,6 +10,7 @@ import com.whatcable.android.core.model.PowerRole
 import com.whatcable.android.core.model.UsbDeviceInfo
 import com.whatcable.android.core.model.UsbPortInfo
 import com.whatcable.android.core.model.UsbSpeedTier
+import com.whatcable.android.data.root.CableIdentityReader
 
 data class CableSnapshot(
     val timestamp: Long = System.currentTimeMillis(),
@@ -21,7 +21,8 @@ data class CableSnapshot(
     val portState: PortState? = null,
     val connectedDevices: List<UsbDeviceInfo> = emptyList(),
     val trustScore: TrustScore = TrustScore(),
-    val complianceWarnings: List<ComplianceWarning> = emptyList()
+    val complianceWarnings: List<ComplianceWarning> = emptyList(),
+    val cableIdentity: CableIdentityReader.CableIdentity? = null
 ) {
     val isConnected: Boolean
         get() = portState?.isConnected == true || connectedDevices.isNotEmpty()
