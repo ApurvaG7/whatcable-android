@@ -72,4 +72,7 @@ dependencies {
 
     implementation(libs.shizuku.api)
     implementation(libs.shizuku.provider)
+
+    compileOnly(project(":hidden-api-stub"))
+    implementation(libs.hidden.api.bypass)
 }

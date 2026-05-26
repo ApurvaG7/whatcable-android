@@ -16,3 +16,4 @@ dependencyResolutionManagement {
 
 rootProject.name = "WhatCable"
 include(":app")
+include(":hidden-api-stub")
