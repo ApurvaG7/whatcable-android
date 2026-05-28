@@ -7,8 +7,10 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -37,7 +39,14 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -59,6 +68,9 @@ import com.whatcable.android.domain.PortState
 import com.whatcable.android.domain.SpeedClassification
 import com.whatcable.android.domain.TrustRating
 import com.whatcable.android.domain.TrustScore
+import com.whatcable.android.ui.theme.Blue40
+import com.whatcable.android.ui.theme.Blue60
+import com.whatcable.android.ui.theme.Green60
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -91,39 +103,60 @@ fun HomeScreen(
 
 @Composable
 private fun EmptyState() {
+    val glowBlue = Blue40
     Box(
-        modifier = Modifier.fillMaxSize(),
+        modifier = Modifier
+            .fillMaxSize()
+            .drawBehind {
+                drawCircle(
+                    brush = Brush.radialGradient(
+                        colors = listOf(glowBlue.copy(alpha = 0.08f), Color.Transparent),
+                        center = Offset(size.width / 2, size.height * 0.4f),
+                        radius = size.width * 0.6f
+                    ),
+                    radius = size.width * 0.6f,
+                    center = Offset(size.width / 2, size.height * 0.4f)
+                )
+            },
         contentAlignment = Alignment.Center
     ) {
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
-            modifier = Modifier.padding(32.dp)
+            modifier = Modifier.padding(48.dp)
         ) {
             Box(
                 modifier = Modifier
-                    .size(80.dp)
+                    .size(96.dp)
                     .clip(CircleShape)
-                    .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)),
+                    .border(
+                        2.dp,
+                        Brush.linearGradient(listOf(Blue60, Blue40)),
+                        CircleShape
+                    )
+                    .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.06f)),
                 contentAlignment = Alignment.Center
             ) {
                 Text(
-                    text = "USB",
-                    style = MaterialTheme.typography.titleMedium,
+                    text = "USB-C",
+                    style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.primary,
-                    fontWeight = FontWeight.Bold
+                    fontWeight = FontWeight.Bold,
+                    letterSpacing = 2.sp
                 )
             }
-            Spacer(modifier = Modifier.height(24.dp))
+            Spacer(modifier = Modifier.height(32.dp))
             Text(
                 text = "WhatCable",
-                style = MaterialTheme.typography.headlineLarge,
-                color = MaterialTheme.colorScheme.primary
+                fontSize = 32.sp,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.primary,
+                letterSpacing = (-1).sp
             )
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(12.dp))
             Text(
-                text = "Connect a USB-C device to diagnose your cable",
+                text = "Connect a USB-C device to begin diagnostics",
                 style = MaterialTheme.typography.bodyLarge,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
                 textAlign = TextAlign.Center
             )
         }
@@ -140,31 +173,25 @@ private fun DashboardContent(
     LazyColumn(
         modifier = Modifier
             .fillMaxSize()
-            .padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp)
+            .padding(horizontal = 16.dp),
+        verticalArrangement = Arrangement.spacedBy(10.dp)
     ) {
+        item { Spacer(modifier = Modifier.height(8.dp)) }
+
         item {
             HeaderRow(snapshot.capabilityTier, onShareReport = onShareReport, snapshot = snapshot)
         }
 
         item {
-            Text(
-                text = snapshot.summary,
-                style = MaterialTheme.typography.headlineSmall,
-                modifier = Modifier.padding(vertical = 4.dp)
-            )
-        }
-
-        item {
-            BadgeRow(snapshot)
-        }
-
-        if (snapshot.portState != null) {
-            item { PortStateCard(snapshot.portState) }
+            HeroSection(snapshot)
         }
 
         if (snapshot.speed.tier != null) {
             item { SpeedCard(snapshot.speed) }
+        }
+
+        if (snapshot.portState != null) {
+            item { PortStateCard(snapshot.portState) }
         }
 
         if (snapshot.charging.confidence != Confidence.NONE) {
@@ -175,12 +202,12 @@ private fun DashboardContent(
             item { BatteryCard(snapshot.batteryState, onClick = onChargingClick) }
         }
 
-        if (snapshot.altModes.isNotEmpty()) {
-            item { AltModesCard(snapshot.altModes) }
-        }
-
         if (snapshot.trustScore.signals.isNotEmpty()) {
             item { TrustCard(snapshot.trustScore) }
+        }
+
+        if (snapshot.altModes.isNotEmpty()) {
+            item { AltModesCard(snapshot.altModes) }
         }
 
         if (snapshot.complianceWarnings.isNotEmpty()) {
@@ -190,15 +217,19 @@ private fun DashboardContent(
         if (snapshot.connectedDevices.isNotEmpty()) {
             item {
                 Text(
-                    text = "Connected Devices",
-                    style = MaterialTheme.typography.titleMedium,
-                    modifier = Modifier.padding(top = 8.dp)
+                    text = "CONNECTED DEVICES",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    letterSpacing = 1.5.sp,
+                    modifier = Modifier.padding(top = 12.dp, bottom = 4.dp)
                 )
             }
             items(snapshot.connectedDevices, key = { it.deviceName }) { device ->
                 DeviceCard(device, onClick = { onDeviceClick(device.deviceName) })
             }
         }
+
+        item { Spacer(modifier = Modifier.height(16.dp)) }
     }
 }
 
@@ -215,12 +246,13 @@ private fun HeaderRow(
     ) {
         Text(
             text = "WhatCable",
-            style = MaterialTheme.typography.titleLarge,
-            color = MaterialTheme.colorScheme.primary,
-            fontWeight = FontWeight.Bold
+            fontSize = 22.sp,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.onSurface,
+            letterSpacing = (-0.5).sp
         )
         Row(
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            horizontalArrangement = Arrangement.spacedBy(4.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             if (snapshot.isConnected) {
@@ -231,7 +263,8 @@ private fun HeaderRow(
                     Icon(
                         Icons.Default.Share,
                         contentDescription = "Share report",
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.size(20.dp)
                     )
                 }
             }
@@ -241,21 +274,37 @@ private fun HeaderRow(
 }
 
 @Composable
+private fun HeroSection(snapshot: CableSnapshot) {
+    val accentBrush = Brush.linearGradient(listOf(Blue60, Blue40))
+    Column(modifier = Modifier.padding(vertical = 4.dp)) {
+        Text(
+            text = snapshot.summary,
+            fontSize = 26.sp,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.onSurface,
+            letterSpacing = (-0.5).sp
+        )
+        Spacer(modifier = Modifier.height(12.dp))
+        BadgeRow(snapshot)
+    }
+}
+
+@Composable
 private fun TierBadge(tier: CapabilityTier) {
     val color = when (tier) {
-        CapabilityTier.BASIC -> MaterialTheme.colorScheme.outline
-        CapabilityTier.FULL -> MaterialTheme.colorScheme.tertiary
+        CapabilityTier.BASIC -> MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+        CapabilityTier.FULL -> Green60
     }
     Text(
-        text = tier.label,
-        style = MaterialTheme.typography.labelMedium,
+        text = tier.label.uppercase(),
+        fontSize = 10.sp,
+        fontWeight = FontWeight.Bold,
         color = color,
-        fontWeight = FontWeight.SemiBold,
+        letterSpacing = 1.sp,
         modifier = Modifier
-            .clip(RoundedCornerShape(12.dp))
-            .border(1.dp, color.copy(alpha = 0.3f), RoundedCornerShape(12.dp))
-            .background(color.copy(alpha = 0.08f))
-            .padding(horizontal = 10.dp, vertical = 4.dp)
+            .clip(RoundedCornerShape(4.dp))
+            .border(1.dp, color.copy(alpha = 0.4f), RoundedCornerShape(4.dp))
+            .padding(horizontal = 8.dp, vertical = 3.dp)
     )
 }
 
@@ -267,112 +316,209 @@ private fun BadgeRow(snapshot: CableSnapshot) {
         verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         snapshot.speed.tier?.let { tier ->
-            InfoBadge(label = tier.label, value = "${tier.gbps} Gbps")
+            InfoBadge(label = "SPEED", value = "${tier.gbps} Gbps", accent = Blue60)
         }
         if (snapshot.charging.isCharging) {
-            val powerText = snapshot.charging.maxPowerWatts?.let { "${it.toInt()}W max" } ?: "Active"
-            InfoBadge(label = "Charging", value = powerText)
+            val powerText = snapshot.charging.maxPowerWatts?.let { "${it.toInt()}W" } ?: "Active"
+            InfoBadge(label = "POWER", value = powerText, accent = Green60)
         }
         snapshot.portState?.let { port ->
             if (port.isConnected) {
-                InfoBadge(label = "Orientation", value = port.orientation.label)
+                InfoBadge(label = "ORIENT.", value = port.orientation.label)
             }
         }
         if (snapshot.trustScore.signals.isNotEmpty()) {
-            val rating = snapshot.trustScore.rating
-            InfoBadge(label = "Quality", value = rating.label)
+            val ratingColor = when (snapshot.trustScore.rating) {
+                TrustRating.HIGH -> Green60
+                TrustRating.MEDIUM -> Color(0xFFFBBF24)
+                TrustRating.LOW -> Color(0xFFF87171)
+                TrustRating.UNKNOWN -> MaterialTheme.colorScheme.onSurfaceVariant
+            }
+            InfoBadge(label = "QUALITY", value = "${snapshot.trustScore.percentage}%", accent = ratingColor)
         }
     }
 }
 
 @Composable
-private fun InfoBadge(label: String, value: String) {
-    Column(
+private fun InfoBadge(
+    label: String,
+    value: String,
+    accent: Color = MaterialTheme.colorScheme.onSurfaceVariant
+) {
+    Row(
         modifier = Modifier
-            .clip(RoundedCornerShape(10.dp))
-            .background(MaterialTheme.colorScheme.surfaceContainer)
-            .border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(10.dp))
-            .padding(horizontal = 14.dp, vertical = 10.dp)
+            .height(IntrinsicSize.Min)
+            .clip(RoundedCornerShape(6.dp))
+            .background(MaterialTheme.colorScheme.surfaceContainerHigh)
+            .padding(end = 12.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Box(
+            modifier = Modifier
+                .width(3.dp)
+                .fillMaxHeight()
+                .background(accent)
+        )
+        Column(modifier = Modifier.padding(start = 10.dp, top = 8.dp, bottom = 8.dp)) {
+            Text(
+                text = label,
+                fontSize = 9.sp,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                letterSpacing = 1.sp
+            )
+            Text(
+                text = value,
+                fontSize = 14.sp,
+                fontWeight = FontWeight.Bold,
+                fontFamily = FontFamily.Monospace,
+                color = accent
+            )
+        }
+    }
+}
+
+@Composable
+private fun AccentCard(
+    accentColor: Color,
+    modifier: Modifier = Modifier,
+    onClick: (() -> Unit)? = null,
+    content: @Composable () -> Unit
+) {
+    val shape = RoundedCornerShape(10.dp)
+    val cardColors = CardDefaults.cardColors(
+        containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
+    )
+
+    if (onClick != null) {
+        Card(onClick = onClick, modifier = modifier.fillMaxWidth(), shape = shape, colors = cardColors) {
+            Row(modifier = Modifier.height(IntrinsicSize.Min)) {
+                Box(
+                    modifier = Modifier
+                        .width(4.dp)
+                        .fillMaxHeight()
+                        .background(
+                            Brush.verticalGradient(
+                                listOf(accentColor, accentColor.copy(alpha = 0.3f))
+                            )
+                        )
+                )
+                Box(modifier = Modifier.weight(1f).padding(16.dp)) { content() }
+            }
+        }
+    } else {
+        Card(modifier = modifier.fillMaxWidth(), shape = shape, colors = cardColors) {
+            Row(modifier = Modifier.height(IntrinsicSize.Min)) {
+                Box(
+                    modifier = Modifier
+                        .width(4.dp)
+                        .fillMaxHeight()
+                        .background(
+                            Brush.verticalGradient(
+                                listOf(accentColor, accentColor.copy(alpha = 0.3f))
+                            )
+                        )
+                )
+                Box(modifier = Modifier.weight(1f).padding(16.dp)) { content() }
+            }
+        }
+    }
+}
+
+@Composable
+private fun CardTitle(title: String, trailing: @Composable () -> Unit = {}) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
     ) {
         Text(
-            text = label,
-            style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
+            text = title.uppercase(),
+            fontSize = 11.sp,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            letterSpacing = 1.5.sp
         )
-        Text(
-            text = value,
-            style = MaterialTheme.typography.bodyMedium,
-            fontWeight = FontWeight.SemiBold
-        )
+        trailing()
     }
 }
 
 @Composable
 private fun PortStateCard(port: PortState) {
-    Card(modifier = Modifier.fillMaxWidth()) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            Text("USB-C Port", style = MaterialTheme.typography.titleMedium)
-            Spacer(modifier = Modifier.height(8.dp))
-            Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                Column {
-                    Text("Mode", style = MaterialTheme.typography.labelSmall)
-                    Text(port.mode.label, style = MaterialTheme.typography.bodySmall)
-                }
-                Column {
-                    Text("Power", style = MaterialTheme.typography.labelSmall)
-                    Text(port.powerRole.label, style = MaterialTheme.typography.bodySmall)
-                }
-                Column {
-                    Text("Data", style = MaterialTheme.typography.labelSmall)
-                    Text(port.dataRole.label, style = MaterialTheme.typography.bodySmall)
-                }
-                Column {
-                    Text("Orientation", style = MaterialTheme.typography.labelSmall)
-                    Text(port.orientation.label, style = MaterialTheme.typography.bodySmall)
-                }
+    AccentCard(accentColor = MaterialTheme.colorScheme.primary) {
+        Column {
+            CardTitle("USB-C Port")
+            Spacer(modifier = Modifier.height(12.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                MetricColumn("Mode", port.mode.label)
+                MetricColumn("Power", port.powerRole.label)
+                MetricColumn("Data", port.dataRole.label)
+                MetricColumn("Flip", port.orientation.label)
             }
         }
     }
 }
 
 @Composable
-private fun SpeedCard(speed: SpeedClassification) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceContainer
+private fun MetricColumn(label: String, value: String) {
+    Column {
+        Text(
+            text = label.uppercase(),
+            fontSize = 9.sp,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+            letterSpacing = 0.8.sp
         )
-    ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text("Speed", style = MaterialTheme.typography.titleMedium)
-                ConfidenceDot(speed.confidence)
-            }
+        Spacer(modifier = Modifier.height(2.dp))
+        Text(
+            text = value,
+            fontSize = 13.sp,
+            fontWeight = FontWeight.SemiBold,
+            fontFamily = FontFamily.Monospace,
+            color = MaterialTheme.colorScheme.onSurface
+        )
+    }
+}
+
+@Composable
+private fun SpeedCard(speed: SpeedClassification) {
+    AccentCard(accentColor = Blue60) {
+        Column {
+            CardTitle("Speed") { ConfidenceDot(speed.confidence) }
             Spacer(modifier = Modifier.height(8.dp))
             speed.tier?.let { tier ->
                 Text(
                     text = tier.label,
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = MaterialTheme.colorScheme.primary,
-                    fontWeight = FontWeight.SemiBold
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
-                Text(
-                    text = "${tier.gbps} Gbps",
-                    style = MaterialTheme.typography.headlineSmall,
-                    color = MaterialTheme.colorScheme.primary,
-                    fontWeight = FontWeight.Bold
-                )
+                Row(verticalAlignment = Alignment.Bottom) {
+                    Text(
+                        text = "${tier.gbps}",
+                        fontSize = 36.sp,
+                        fontWeight = FontWeight.Bold,
+                        fontFamily = FontFamily.Monospace,
+                        color = Blue60,
+                        letterSpacing = (-1).sp
+                    )
+                    Text(
+                        text = " Gbps",
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Medium,
+                        color = Blue60.copy(alpha = 0.6f),
+                        modifier = Modifier.padding(bottom = 6.dp)
+                    )
+                }
             }
             if (speed.sources.isNotEmpty()) {
-                Spacer(modifier = Modifier.height(6.dp))
+                Spacer(modifier = Modifier.height(4.dp))
                 Text(
-                    text = "Source: ${speed.sources.joinToString(", ") { it.name.lowercase().replace('_', ' ') }}",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    text = "via ${speed.sources.joinToString(", ") { it.name.lowercase().replace('_', ' ') }}",
+                    fontSize = 11.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
                 )
             }
         }
@@ -381,25 +527,22 @@ private fun SpeedCard(speed: SpeedClassification) {
 
 @Composable
 private fun ChargingCard(charging: ChargingAssessment, onClick: () -> Unit = {}) {
-    Card(onClick = onClick, modifier = Modifier.fillMaxWidth()) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text("Power", style = MaterialTheme.typography.titleMedium)
+    val accentColor = if (charging.isCharging) Green60 else MaterialTheme.colorScheme.onSurfaceVariant
+    AccentCard(accentColor = accentColor, onClick = onClick) {
+        Column {
+            CardTitle("Power") {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     ConfidenceDot(charging.confidence)
+                    Spacer(modifier = Modifier.width(4.dp))
                     Icon(
                         Icons.AutoMirrored.Filled.KeyboardArrowRight,
                         contentDescription = null,
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.size(20.dp)
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
+                        modifier = Modifier.size(18.dp)
                     )
                 }
             }
-            Spacer(modifier = Modifier.height(4.dp))
+            Spacer(modifier = Modifier.height(8.dp))
             val powerLabel = when (charging.powerRole) {
                 PowerRole.SOURCE -> "Powering device"
                 PowerRole.SINK -> "Charging"
@@ -407,28 +550,33 @@ private fun ChargingCard(charging: ChargingAssessment, onClick: () -> Unit = {})
             }
             Text(
                 text = powerLabel,
-                style = MaterialTheme.typography.bodyLarge
+                fontSize = 16.sp,
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.onSurface
             )
             if (charging.powerDeliverySupported) {
                 Text(
-                    text = "USB Power Delivery supported",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.primary
+                    text = "USB Power Delivery",
+                    fontSize = 12.sp,
+                    color = Green60
                 )
             }
             charging.maxPowerWatts?.let { watts ->
                 Text(
-                    text = "Estimated max: ${watts.toInt()}W",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    text = "Max ${watts.toInt()}W",
+                    fontSize = 12.sp,
+                    fontFamily = FontFamily.Monospace,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
                 )
             }
             if (charging.powerTransferLimited) {
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
-                    text = "Power transfer limited",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.error
+                    text = "POWER LIMITED",
+                    fontSize = 10.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.error,
+                    letterSpacing = 1.sp
                 )
             }
         }
@@ -437,62 +585,31 @@ private fun ChargingCard(charging: ChargingAssessment, onClick: () -> Unit = {})
 
 @Composable
 private fun BatteryCard(state: ChargingState, onClick: () -> Unit = {}) {
-    Card(onClick = onClick, modifier = Modifier.fillMaxWidth()) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text("Charging", style = MaterialTheme.typography.titleMedium)
+    AccentCard(accentColor = Green60, onClick = onClick) {
+        Column {
+            CardTitle("Charging") {
                 Icon(
                     Icons.AutoMirrored.Filled.KeyboardArrowRight,
                     contentDescription = null,
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.size(20.dp)
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
+                    modifier = Modifier.size(18.dp)
                 )
             }
-            Spacer(modifier = Modifier.height(8.dp))
-            Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                Column {
-                    Text("Battery", style = MaterialTheme.typography.labelSmall)
-                    Text("${state.batteryPercent}%", style = MaterialTheme.typography.bodyMedium)
-                }
-                state.wattage?.let {
-                    Column {
-                        Text("Power", style = MaterialTheme.typography.labelSmall)
-                        Text("%.1fW".format(it), style = MaterialTheme.typography.bodyMedium)
-                    }
-                }
-                state.currentMa?.let {
-                    Column {
-                        Text("Current", style = MaterialTheme.typography.labelSmall)
-                        Text("${kotlin.math.abs(it)} mA", style = MaterialTheme.typography.bodyMedium)
-                    }
-                }
-                state.voltageMv?.let {
-                    Column {
-                        Text("Voltage", style = MaterialTheme.typography.labelSmall)
-                        Text("$it mV", style = MaterialTheme.typography.bodyMedium)
-                    }
-                }
+            Spacer(modifier = Modifier.height(12.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                MetricColumn("Battery", "${state.batteryPercent}%")
+                state.wattage?.let { MetricColumn("Power", "%.1fW".format(it)) }
+                state.currentMa?.let { MetricColumn("Current", "${kotlin.math.abs(it)} mA") }
+                state.voltageMv?.let { MetricColumn("Voltage", "$it mV") }
             }
-            Spacer(modifier = Modifier.height(4.dp))
-            Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                Column {
-                    Text("Temp", style = MaterialTheme.typography.labelSmall)
-                    Text("%.1f C".format(state.temperatureCelsius), style = MaterialTheme.typography.bodyMedium)
-                }
-                Column {
-                    Text("Plug", style = MaterialTheme.typography.labelSmall)
-                    Text(state.plugType.label, style = MaterialTheme.typography.bodyMedium)
-                }
-                state.chargerType?.let {
-                    Column {
-                        Text("Type", style = MaterialTheme.typography.labelSmall)
-                        Text(it, style = MaterialTheme.typography.bodyMedium)
-                    }
-                }
+            Spacer(modifier = Modifier.height(8.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(24.dp)) {
+                MetricColumn("Temp", "%.1f°C".format(state.temperatureCelsius))
+                MetricColumn("Plug", state.plugType.label)
+                state.chargerType?.let { MetricColumn("Type", it) }
             }
         }
     }
@@ -500,31 +617,43 @@ private fun BatteryCard(state: ChargingState, onClick: () -> Unit = {}) {
 
 @Composable
 private fun AltModesCard(altModes: List<AltModeInfo>) {
-    Card(modifier = Modifier.fillMaxWidth()) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            Text("Alt Modes", style = MaterialTheme.typography.titleMedium)
-            Spacer(modifier = Modifier.height(8.dp))
+    AccentCard(accentColor = Color(0xFF8B5CF6)) {
+        Column {
+            CardTitle("Alt Modes")
+            Spacer(modifier = Modifier.height(10.dp))
             altModes.forEach { altMode ->
                 val statusColor = when (altMode.status) {
-                    AltModeStatus.CONFIGURATION_SUCCESSFUL -> MaterialTheme.colorScheme.primary
+                    AltModeStatus.CONFIGURATION_SUCCESSFUL -> Green60
                     AltModeStatus.CONFIGURATION_FAILED -> MaterialTheme.colorScheme.error
-                    else -> MaterialTheme.colorScheme.onSurfaceVariant
+                    else -> MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
                 }
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(vertical = 2.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween
+                        .padding(vertical = 3.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
                         text = altMode.name,
-                        style = MaterialTheme.typography.bodySmall
+                        fontSize = 13.sp,
+                        fontFamily = FontFamily.Monospace,
+                        color = MaterialTheme.colorScheme.onSurface
                     )
-                    Text(
-                        text = altMode.status.label,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = statusColor
-                    )
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Box(
+                            modifier = Modifier
+                                .size(6.dp)
+                                .clip(CircleShape)
+                                .background(statusColor)
+                        )
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text(
+                            text = altMode.status.label,
+                            fontSize = 11.sp,
+                            color = statusColor
+                        )
+                    }
                 }
             }
         }
@@ -534,64 +663,65 @@ private fun AltModesCard(altModes: List<AltModeInfo>) {
 @Composable
 private fun TrustCard(trust: TrustScore) {
     val ratingColor = when (trust.rating) {
-        TrustRating.HIGH -> MaterialTheme.colorScheme.primary
-        TrustRating.MEDIUM -> MaterialTheme.colorScheme.tertiary
-        TrustRating.LOW -> MaterialTheme.colorScheme.error
+        TrustRating.HIGH -> Green60
+        TrustRating.MEDIUM -> Color(0xFFFBBF24)
+        TrustRating.LOW -> Color(0xFFF87171)
         TrustRating.UNKNOWN -> MaterialTheme.colorScheme.outline
     }
 
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceContainer
-        )
-    ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text("Cable Quality", style = MaterialTheme.typography.titleMedium)
+    AccentCard(accentColor = ratingColor) {
+        Column {
+            CardTitle("Cable Quality") {
                 Text(
                     text = "${trust.percentage}%",
-                    style = MaterialTheme.typography.headlineSmall,
-                    color = ratingColor,
-                    fontWeight = FontWeight.Bold
+                    fontSize = 24.sp,
+                    fontWeight = FontWeight.Bold,
+                    fontFamily = FontFamily.Monospace,
+                    color = ratingColor
                 )
             }
-            Spacer(modifier = Modifier.height(10.dp))
+            Spacer(modifier = Modifier.height(12.dp))
             LinearProgressIndicator(
                 progress = { trust.percentage / 100f },
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(10.dp)
-                    .clip(RoundedCornerShape(5.dp)),
+                    .height(6.dp)
+                    .clip(RoundedCornerShape(3.dp)),
                 color = ratingColor,
-                trackColor = MaterialTheme.colorScheme.outlineVariant,
+                trackColor = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f),
                 strokeCap = StrokeCap.Round
             )
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(14.dp))
             trust.signals.forEach { signal ->
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(vertical = 1.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween
+                        .padding(vertical = 2.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text(
-                        text = signal.name,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Box(
+                            modifier = Modifier
+                                .size(5.dp)
+                                .clip(CircleShape)
+                                .background(
+                                    if (signal.present) Green60
+                                    else MaterialTheme.colorScheme.outlineVariant
+                                )
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = signal.name,
+                            fontSize = 12.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
                     Text(
                         text = signal.description,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = if (signal.present) {
-                            MaterialTheme.colorScheme.primary
-                        } else {
-                            MaterialTheme.colorScheme.onSurfaceVariant
-                        }
+                        fontSize = 11.sp,
+                        color = if (signal.present) Green60.copy(alpha = 0.8f)
+                        else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f)
                     )
                 }
             }
@@ -601,23 +731,14 @@ private fun TrustCard(trust: TrustScore) {
 
 @Composable
 private fun ComplianceCard(warnings: List<ComplianceWarning>) {
-    OutlinedCard(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.outlinedCardColors(
-            containerColor = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.3f)
-        )
-    ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            Text(
-                text = "Compliance Warnings",
-                style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.error
-            )
-            Spacer(modifier = Modifier.height(4.dp))
+    AccentCard(accentColor = MaterialTheme.colorScheme.error) {
+        Column {
+            CardTitle("Compliance Warnings")
+            Spacer(modifier = Modifier.height(8.dp))
             warnings.forEach { warning ->
                 Text(
                     text = warning.label,
-                    style = MaterialTheme.typography.bodySmall,
+                    fontSize = 12.sp,
                     color = MaterialTheme.colorScheme.error,
                     modifier = Modifier.padding(vertical = 2.dp)
                 )
@@ -629,31 +750,32 @@ private fun ComplianceCard(warnings: List<ComplianceWarning>) {
 @Composable
 private fun ConfidenceDot(confidence: Confidence) {
     val color = when (confidence) {
-        Confidence.HIGH -> MaterialTheme.colorScheme.primary
-        Confidence.MEDIUM -> MaterialTheme.colorScheme.tertiary
+        Confidence.HIGH -> Green60
+        Confidence.MEDIUM -> Color(0xFFFBBF24)
         Confidence.LOW -> MaterialTheme.colorScheme.outline
         Confidence.NONE -> MaterialTheme.colorScheme.outlineVariant
     }
     Row(verticalAlignment = Alignment.CenterVertically) {
         Box(
             modifier = Modifier
-                .size(8.dp)
+                .size(6.dp)
                 .clip(CircleShape)
                 .background(color)
         )
         Spacer(modifier = Modifier.width(4.dp))
         Text(
-            text = confidence.name.lowercase().replaceFirstChar { it.uppercase() },
-            style = MaterialTheme.typography.labelSmall,
-            color = color
+            text = confidence.name.lowercase(),
+            fontSize = 10.sp,
+            fontWeight = FontWeight.Medium,
+            color = color.copy(alpha = 0.8f)
         )
     }
 }
 
 @Composable
 private fun DeviceCard(device: UsbDeviceInfo, onClick: () -> Unit = {}) {
-    Card(onClick = onClick, modifier = Modifier.fillMaxWidth()) {
-        Column(modifier = Modifier.padding(16.dp)) {
+    AccentCard(accentColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f), onClick = onClick) {
+        Column {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -661,28 +783,30 @@ private fun DeviceCard(device: UsbDeviceInfo, onClick: () -> Unit = {}) {
             ) {
                 Text(
                     text = device.productName ?: device.manufacturerName ?: "Unknown Device",
-                    style = MaterialTheme.typography.titleMedium,
+                    fontSize = 15.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.onSurface,
                     modifier = Modifier.weight(1f)
                 )
                 Icon(
                     Icons.AutoMirrored.Filled.KeyboardArrowRight,
                     contentDescription = null,
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.size(20.dp)
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
+                    modifier = Modifier.size(18.dp)
                 )
             }
 
             if (device.manufacturerName != null && device.productName != null) {
                 Text(
                     text = device.manufacturerName,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    fontSize = 12.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
                 )
             }
 
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(10.dp))
 
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 DetailChip("VID ${device.vendorIdHex}")
                 DetailChip("PID ${device.productIdHex}")
                 if (device.usbVersion != null) {
@@ -690,21 +814,12 @@ private fun DeviceCard(device: UsbDeviceInfo, onClick: () -> Unit = {}) {
                 }
             }
 
-            if (device.deviceClass != 0) {
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(
-                    text = "Class: ${device.deviceClassLabel}",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-
             val interfaceCount = device.configurations.sumOf { it.interfaces.size }
-            Spacer(modifier = Modifier.height(4.dp))
+            Spacer(modifier = Modifier.height(6.dp))
             Text(
-                text = "$interfaceCount interface${if (interfaceCount != 1) "s" else ""} across ${device.configurations.size} config${if (device.configurations.size != 1) "s" else ""}",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                text = "$interfaceCount interface${if (interfaceCount != 1) "s" else ""}, ${device.configurations.size} config${if (device.configurations.size != 1) "s" else ""}",
+                fontSize = 11.sp,
+                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f)
             )
         }
     }
@@ -714,12 +829,13 @@ private fun DeviceCard(device: UsbDeviceInfo, onClick: () -> Unit = {}) {
 private fun DetailChip(text: String) {
     Text(
         text = text,
-        style = MaterialTheme.typography.labelSmall,
-        color = MaterialTheme.colorScheme.primary,
-        fontWeight = FontWeight.Medium,
+        fontSize = 10.sp,
+        fontWeight = FontWeight.Bold,
+        fontFamily = FontFamily.Monospace,
+        color = MaterialTheme.colorScheme.primary.copy(alpha = 0.7f),
         modifier = Modifier
-            .clip(RoundedCornerShape(6.dp))
-            .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.1f))
-            .padding(horizontal = 8.dp, vertical = 3.dp)
+            .clip(RoundedCornerShape(4.dp))
+            .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.08f))
+            .padding(horizontal = 6.dp, vertical = 3.dp)
     )
 }
