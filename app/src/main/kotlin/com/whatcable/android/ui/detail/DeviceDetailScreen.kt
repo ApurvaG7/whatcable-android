@@ -163,6 +163,8 @@ private fun BosSection(bos: BosDescriptor) {
                         CapabilityRow("SuperSpeed", cap.maxSpeed.label)
                         if (cap.supportsGen1) CapabilityDetail("Gen 1 (5 Gbps)")
                         if (cap.supportsGen2) CapabilityDetail("Gen 2 (10 Gbps)")
+                        if (cap.u1DevExitLat > 0) CapabilityDetail("U1 exit latency: ${cap.u1DevExitLat} µs")
+                        if (cap.u2DevExitLat > 0) CapabilityDetail("U2 exit latency: ${cap.u2DevExitLat} µs")
                     }
                     is BosCapability.SuperSpeedPlus -> {
                         CapabilityRow("SuperSpeed+", cap.maxSpeed.label)
@@ -192,6 +194,12 @@ private fun BillboardSection(billboard: com.whatcable.android.core.model.Billboa
             DetailRow("VCONN Power", "${"%.1f".format(billboard.vconnPower.wattsRequired)}W")
             if (billboard.preferredAltModeIndex >= 0) {
                 DetailRow("Preferred", "Alt mode #${billboard.preferredAltModeIndex}")
+            }
+            if (billboard.hasFailedNegotiation) {
+                DetailRow("Negotiation", "Failed")
+                if (billboard.additionalFailureInfo != 0) {
+                    DetailRow("Failure Info", "0x${"%02X".format(billboard.additionalFailureInfo)}")
+                }
             }
             Spacer(modifier = Modifier.height(8.dp))
             billboard.altModes.forEach { altMode ->
@@ -271,13 +279,44 @@ private fun InterfaceRow(iface: UsbInterfaceInfo) {
         iface.name?.let {
             Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
-        if (iface.endpoints.isNotEmpty()) {
+        if (iface.interfaceSubclass != 0 || iface.interfaceProtocol != 0) {
             Text(
-                text = "${iface.endpoints.size} endpoint${if (iface.endpoints.size != 1) "s" else ""}",
+                text = "Subclass: 0x${"%02X".format(iface.interfaceSubclass)}, Protocol: 0x${"%02X".format(iface.interfaceProtocol)}",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
+        if (iface.alternateSetting != 0) {
+            Text(
+                text = "Alt setting: ${iface.alternateSetting}",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+        iface.endpoints.forEach { endpoint ->
+            EndpointRow(endpoint)
+        }
+    }
+}
+
+@Composable
+private fun EndpointRow(endpoint: com.whatcable.android.core.model.UsbEndpointInfo) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(start = 12.dp, top = 2.dp, bottom = 2.dp),
+        horizontalArrangement = Arrangement.SpaceBetween
+    ) {
+        Text(
+            text = "EP 0x${"%02X".format(endpoint.address)} ${endpoint.direction.name}",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        Text(
+            text = "${endpoint.type.name.lowercase()} ${endpoint.maxPacketSize}B",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
     }
 }
 

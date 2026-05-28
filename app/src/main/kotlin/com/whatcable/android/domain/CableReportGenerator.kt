@@ -73,6 +73,19 @@ class CableReportGenerator @Inject constructor() {
             appendLine()
         }
 
+        snapshot.cableIdentity?.let { identity ->
+            appendLine("## Cable Identity")
+            appendLine("Type: ${identity.cableType.label}")
+            appendLine("USB4: ${if (identity.supportsUsb4) "Yes" else "No"}")
+            identity.maxCurrentMa?.let { appendLine("Max current: ${it / 1000}A") }
+            identity.maxSpeedGbps?.let { appendLine("Max speed: ${it} Gbps") }
+            identity.idHeader?.let { appendLine("ID Header: 0x${"%08X".format(it)}") }
+            identity.product?.let { appendLine("Product VDO: 0x${"%08X".format(it)}") }
+            identity.productTypeVdo1?.let { appendLine("VDO1: 0x${"%08X".format(it)}") }
+            identity.productTypeVdo2?.let { appendLine("VDO2: 0x${"%08X".format(it)}") }
+            appendLine()
+        }
+
         if (snapshot.complianceWarnings.isNotEmpty()) {
             appendLine("## Compliance Warnings")
             snapshot.complianceWarnings.forEach { warning ->

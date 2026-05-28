@@ -60,6 +60,7 @@ import com.whatcable.android.core.model.ComplianceWarning
 import com.whatcable.android.core.model.PowerRole
 import com.whatcable.android.core.model.UsbDeviceInfo
 import com.whatcable.android.data.charging.ChargingState
+import com.whatcable.android.data.root.CableIdentityReader
 import com.whatcable.android.domain.AltModeInfo
 import com.whatcable.android.domain.CableReportGenerator
 import com.whatcable.android.domain.CableSnapshot
@@ -204,6 +205,10 @@ private fun DashboardContent(
 
         if (!snapshot.isConnected && snapshot.batteryState != null) {
             item { BatteryCard(snapshot.batteryState, onClick = onChargingClick) }
+        }
+
+        snapshot.cableIdentity?.let { identity ->
+            item { CableIdentityCard(identity) }
         }
 
         if (snapshot.trustScore.signals.isNotEmpty()) {
@@ -779,6 +784,34 @@ private fun ConfidenceDot(confidence: Confidence) {
             fontWeight = FontWeight.Medium,
             color = color.copy(alpha = 0.8f)
         )
+    }
+}
+
+@Composable
+private fun CableIdentityCard(identity: CableIdentityReader.CableIdentity) {
+    AccentCard(accentColor = Green60) {
+        Column {
+            CardTitle("Cable Identity")
+            Spacer(modifier = Modifier.height(12.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                MetricColumn("Type", identity.cableType.label)
+                MetricColumn("USB4", if (identity.supportsUsb4) "Yes" else "No")
+                identity.maxCurrentMa?.let { MetricColumn("Max Current", "${it / 1000}A") }
+                identity.maxSpeedGbps?.let { MetricColumn("Max Speed", "${it}Gbps") }
+            }
+            if (identity.idHeader != null || identity.product != null) {
+                Spacer(modifier = Modifier.height(8.dp))
+                identity.idHeader?.let {
+                    MetricColumn("ID Header", "0x${"%08X".format(it)}")
+                }
+                identity.product?.let {
+                    MetricColumn("Product VDO", "0x${"%08X".format(it)}")
+                }
+            }
+        }
     }
 }
 
