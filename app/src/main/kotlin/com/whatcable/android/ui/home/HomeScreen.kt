@@ -2,6 +2,7 @@ package com.whatcable.android.ui.home
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -78,6 +79,7 @@ fun HomeScreen(
     onDeviceClick: (String) -> Unit = {},
     onShareReport: (String) -> Unit = {},
     onChargingClick: () -> Unit = {},
+    onTierClick: () -> Unit = {},
     modifier: Modifier = Modifier,
     viewModel: HomeViewModel = hiltViewModel()
 ) {
@@ -95,7 +97,8 @@ fun HomeScreen(
                 snapshot = uiState.snapshot,
                 onDeviceClick = onDeviceClick,
                 onShareReport = onShareReport,
-                onChargingClick = onChargingClick
+                onChargingClick = onChargingClick,
+                onTierClick = onTierClick
             )
         }
     }
@@ -168,7 +171,8 @@ private fun DashboardContent(
     snapshot: CableSnapshot,
     onDeviceClick: (String) -> Unit,
     onShareReport: (String) -> Unit,
-    onChargingClick: () -> Unit
+    onChargingClick: () -> Unit,
+    onTierClick: () -> Unit
 ) {
     LazyColumn(
         modifier = Modifier
@@ -179,7 +183,7 @@ private fun DashboardContent(
         item { Spacer(modifier = Modifier.height(8.dp)) }
 
         item {
-            HeaderRow(snapshot.capabilityTier, onShareReport = onShareReport, snapshot = snapshot)
+            HeaderRow(snapshot.capabilityTier, onShareReport = onShareReport, snapshot = snapshot, onTierClick = onTierClick)
         }
 
         item {
@@ -237,7 +241,8 @@ private fun DashboardContent(
 private fun HeaderRow(
     tier: CapabilityTier,
     onShareReport: (String) -> Unit,
-    snapshot: CableSnapshot
+    snapshot: CableSnapshot,
+    onTierClick: () -> Unit
 ) {
     Row(
         modifier = Modifier.fillMaxWidth(),
@@ -268,7 +273,7 @@ private fun HeaderRow(
                     )
                 }
             }
-            TierBadge(tier)
+            TierBadge(tier, onClick = onTierClick)
         }
     }
 }
@@ -290,7 +295,7 @@ private fun HeroSection(snapshot: CableSnapshot) {
 }
 
 @Composable
-private fun TierBadge(tier: CapabilityTier) {
+private fun TierBadge(tier: CapabilityTier, onClick: () -> Unit = {}) {
     val color = when (tier) {
         CapabilityTier.BASIC -> MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
         CapabilityTier.FULL -> Green60
@@ -304,6 +309,7 @@ private fun TierBadge(tier: CapabilityTier) {
         modifier = Modifier
             .clip(RoundedCornerShape(4.dp))
             .border(1.dp, color.copy(alpha = 0.4f), RoundedCornerShape(4.dp))
+            .clickable { onClick() }
             .padding(horizontal = 8.dp, vertical = 3.dp)
     )
 }

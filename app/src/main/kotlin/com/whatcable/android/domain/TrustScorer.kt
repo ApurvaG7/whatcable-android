@@ -21,8 +21,12 @@ class TrustScorer @Inject constructor() {
         signals.add(checkBosPresent(devices))
         signals.add(checkManufacturerIdentified(devices))
         signals.add(checkSuperSpeedCapable(speed))
-        signals.add(checkNoComplianceWarnings(portInfo))
-        signals.add(checkNoPowerLimitation(portInfo))
+
+        if (portInfo != null) {
+            signals.add(checkNoComplianceWarnings(portInfo))
+            signals.add(checkNoPowerLimitation(portInfo))
+        }
+
         signals.add(checkAltModeNegotiation(devices))
         signals.add(checkLpmSupport(devices))
 
@@ -66,31 +70,23 @@ class TrustScorer @Inject constructor() {
         )
     }
 
-    private fun checkNoComplianceWarnings(portInfo: UsbPortInfo?): TrustSignal {
-        val present = portInfo != null && portInfo.complianceWarnings.isEmpty()
+    private fun checkNoComplianceWarnings(portInfo: UsbPortInfo): TrustSignal {
+        val present = portInfo.complianceWarnings.isEmpty()
         return TrustSignal(
             name = "Compliance",
             present = present,
             points = 20,
-            description = when {
-                portInfo == null -> "Port info unavailable"
-                present -> "No compliance warnings"
-                else -> "${portInfo.complianceWarnings.size} compliance issue(s)"
-            }
+            description = if (present) "No compliance warnings" else "${portInfo.complianceWarnings.size} compliance issue(s)"
         )
     }
 
-    private fun checkNoPowerLimitation(portInfo: UsbPortInfo?): TrustSignal {
-        val present = portInfo != null && portInfo.powerTransferLimited != true
+    private fun checkNoPowerLimitation(portInfo: UsbPortInfo): TrustSignal {
+        val present = portInfo.powerTransferLimited != true
         return TrustSignal(
             name = "Power delivery",
             present = present,
             points = 10,
-            description = when {
-                portInfo == null -> "Port info unavailable"
-                present -> "Power transfer normal"
-                else -> "Power transfer limited"
-            }
+            description = if (present) "Power transfer normal" else "Power transfer limited"
         )
     }
 
