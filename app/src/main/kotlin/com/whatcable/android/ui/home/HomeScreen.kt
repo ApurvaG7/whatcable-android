@@ -1,6 +1,7 @@
 package com.whatcable.android.ui.home
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -19,6 +20,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -38,7 +40,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.whatcable.android.core.model.AltModeStatus
@@ -96,16 +100,36 @@ private fun EmptyState() {
         modifier = Modifier.fillMaxSize(),
         contentAlignment = Alignment.Center
     ) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            modifier = Modifier.padding(32.dp)
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(80.dp)
+                    .clip(CircleShape)
+                    .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = "USB",
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.primary,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+            Spacer(modifier = Modifier.height(24.dp))
             Text(
                 text = "WhatCable",
-                style = MaterialTheme.typography.headlineLarge
+                style = MaterialTheme.typography.headlineLarge,
+                color = MaterialTheme.colorScheme.primary
             )
             Spacer(modifier = Modifier.height(8.dp))
             Text(
-                text = "Connect a USB device to get started",
+                text = "Connect a USB-C device to diagnose your cable",
                 style = MaterialTheme.typography.bodyLarge,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = TextAlign.Center
             )
         }
     }
@@ -202,7 +226,9 @@ private fun HeaderRow(
     ) {
         Text(
             text = "WhatCable",
-            style = MaterialTheme.typography.titleLarge
+            style = MaterialTheme.typography.titleLarge,
+            color = MaterialTheme.colorScheme.primary,
+            fontWeight = FontWeight.Bold
         )
         Row(
             horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -213,7 +239,11 @@ private fun HeaderRow(
                     val report = CableReportGenerator().generate(snapshot)
                     onShareReport(report)
                 }) {
-                    Icon(Icons.Default.Share, contentDescription = "Share report")
+                    Icon(
+                        Icons.Default.Share,
+                        contentDescription = "Share report",
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
                 }
             }
             TierBadge(tier)
@@ -232,10 +262,12 @@ private fun TierBadge(tier: CapabilityTier) {
         text = tier.label,
         style = MaterialTheme.typography.labelMedium,
         color = color,
+        fontWeight = FontWeight.SemiBold,
         modifier = Modifier
-            .clip(RoundedCornerShape(4.dp))
-            .background(color.copy(alpha = 0.12f))
-            .padding(horizontal = 8.dp, vertical = 4.dp)
+            .clip(RoundedCornerShape(12.dp))
+            .border(1.dp, color.copy(alpha = 0.3f), RoundedCornerShape(12.dp))
+            .background(color.copy(alpha = 0.08f))
+            .padding(horizontal = 10.dp, vertical = 4.dp)
     )
 }
 
@@ -269,9 +301,10 @@ private fun BadgeRow(snapshot: CableSnapshot) {
 private fun InfoBadge(label: String, value: String) {
     Column(
         modifier = Modifier
-            .clip(RoundedCornerShape(8.dp))
-            .background(MaterialTheme.colorScheme.surfaceVariant)
-            .padding(horizontal = 12.dp, vertical = 8.dp)
+            .clip(RoundedCornerShape(10.dp))
+            .background(MaterialTheme.colorScheme.surfaceContainer)
+            .border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(10.dp))
+            .padding(horizontal = 14.dp, vertical = 10.dp)
     ) {
         Text(
             text = label,
@@ -281,7 +314,7 @@ private fun InfoBadge(label: String, value: String) {
         Text(
             text = value,
             style = MaterialTheme.typography.bodyMedium,
-            fontWeight = FontWeight.Medium
+            fontWeight = FontWeight.SemiBold
         )
     }
 }
@@ -316,7 +349,12 @@ private fun PortStateCard(port: PortState) {
 
 @Composable
 private fun SpeedCard(speed: SpeedClassification) {
-    Card(modifier = Modifier.fillMaxWidth()) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceContainer
+        )
+    ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -326,18 +364,25 @@ private fun SpeedCard(speed: SpeedClassification) {
                 Text("Speed", style = MaterialTheme.typography.titleMedium)
                 ConfidenceDot(speed.confidence)
             }
-            Spacer(modifier = Modifier.height(4.dp))
+            Spacer(modifier = Modifier.height(8.dp))
             speed.tier?.let { tier ->
                 Text(
-                    text = "${tier.label} (${tier.gbps} Gbps)",
+                    text = tier.label,
                     style = MaterialTheme.typography.bodyLarge,
-                    color = MaterialTheme.colorScheme.primary
+                    color = MaterialTheme.colorScheme.primary,
+                    fontWeight = FontWeight.SemiBold
+                )
+                Text(
+                    text = "${tier.gbps} Gbps",
+                    style = MaterialTheme.typography.headlineSmall,
+                    color = MaterialTheme.colorScheme.primary,
+                    fontWeight = FontWeight.Bold
                 )
             }
             if (speed.sources.isNotEmpty()) {
-                Spacer(modifier = Modifier.height(4.dp))
+                Spacer(modifier = Modifier.height(6.dp))
                 Text(
-                    text = "Sources: ${speed.sources.joinToString(", ") { it.name.lowercase().replace('_', ' ') }}",
+                    text = "Source: ${speed.sources.joinToString(", ") { it.name.lowercase().replace('_', ' ') }}",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -356,7 +401,15 @@ private fun ChargingCard(charging: ChargingAssessment, onClick: () -> Unit = {})
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text("Power", style = MaterialTheme.typography.titleMedium)
-                ConfidenceDot(charging.confidence)
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    ConfidenceDot(charging.confidence)
+                    Icon(
+                        Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
             }
             Spacer(modifier = Modifier.height(4.dp))
             val powerLabel = when (charging.powerRole) {
@@ -398,7 +451,19 @@ private fun ChargingCard(charging: ChargingAssessment, onClick: () -> Unit = {})
 private fun BatteryCard(state: ChargingState, onClick: () -> Unit = {}) {
     Card(onClick = onClick, modifier = Modifier.fillMaxWidth()) {
         Column(modifier = Modifier.padding(16.dp)) {
-            Text("Charging", style = MaterialTheme.typography.titleMedium)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text("Charging", style = MaterialTheme.typography.titleMedium)
+                Icon(
+                    Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.size(20.dp)
+                )
+            }
             Spacer(modifier = Modifier.height(8.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                 Column {
@@ -487,7 +552,12 @@ private fun TrustCard(trust: TrustScore) {
         TrustRating.UNKNOWN -> MaterialTheme.colorScheme.outline
     }
 
-    Card(modifier = Modifier.fillMaxWidth()) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceContainer
+        )
+    ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -497,23 +567,23 @@ private fun TrustCard(trust: TrustScore) {
                 Text("Cable Quality", style = MaterialTheme.typography.titleMedium)
                 Text(
                     text = "${trust.percentage}%",
-                    style = MaterialTheme.typography.titleMedium,
+                    style = MaterialTheme.typography.headlineSmall,
                     color = ratingColor,
                     fontWeight = FontWeight.Bold
                 )
             }
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(10.dp))
             LinearProgressIndicator(
                 progress = { trust.percentage / 100f },
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(8.dp)
-                    .clip(RoundedCornerShape(4.dp)),
+                    .height(10.dp)
+                    .clip(RoundedCornerShape(5.dp)),
                 color = ratingColor,
-                trackColor = MaterialTheme.colorScheme.surfaceVariant,
+                trackColor = MaterialTheme.colorScheme.outlineVariant,
                 strokeCap = StrokeCap.Round
             )
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(12.dp))
             trust.signals.forEach { signal ->
                 Row(
                     modifier = Modifier
@@ -625,10 +695,23 @@ private fun ShizukuPrompt(
 private fun DeviceCard(device: UsbDeviceInfo, onClick: () -> Unit = {}) {
     Card(onClick = onClick, modifier = Modifier.fillMaxWidth()) {
         Column(modifier = Modifier.padding(16.dp)) {
-            Text(
-                text = device.productName ?: device.manufacturerName ?: "Unknown Device",
-                style = MaterialTheme.typography.titleMedium
-            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = device.productName ?: device.manufacturerName ?: "Unknown Device",
+                    style = MaterialTheme.typography.titleMedium,
+                    modifier = Modifier.weight(1f)
+                )
+                Icon(
+                    Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.size(20.dp)
+                )
+            }
 
             if (device.manufacturerName != null && device.productName != null) {
                 Text(
@@ -673,10 +756,11 @@ private fun DetailChip(text: String) {
     Text(
         text = text,
         style = MaterialTheme.typography.labelSmall,
-        color = MaterialTheme.colorScheme.onSecondaryContainer,
+        color = MaterialTheme.colorScheme.primary,
+        fontWeight = FontWeight.Medium,
         modifier = Modifier
-            .clip(RoundedCornerShape(4.dp))
-            .background(MaterialTheme.colorScheme.secondaryContainer)
-            .padding(horizontal = 6.dp, vertical = 2.dp)
+            .clip(RoundedCornerShape(6.dp))
+            .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.1f))
+            .padding(horizontal = 8.dp, vertical = 3.dp)
     )
 }
