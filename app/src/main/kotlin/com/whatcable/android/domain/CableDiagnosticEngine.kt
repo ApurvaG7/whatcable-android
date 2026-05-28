@@ -5,6 +5,7 @@ import com.whatcable.android.core.model.CapabilityTier
 import com.whatcable.android.core.model.UsbDeviceInfo
 import com.whatcable.android.core.model.UsbPortInfo
 import com.whatcable.android.core.model.UsbSpeedTier
+import com.whatcable.android.data.charging.ChargingMonitor
 import com.whatcable.android.data.root.AltModeReader
 import com.whatcable.android.data.root.CableIdentityReader
 import com.whatcable.android.data.root.RootChecker
@@ -28,7 +29,8 @@ class CableDiagnosticEngine @Inject constructor(
     private val suExecutor: SuExecutor,
     private val typeCPortReader: TypeCPortReader,
     private val cableIdentityReader: CableIdentityReader,
-    private val altModeReader: AltModeReader
+    private val altModeReader: AltModeReader,
+    private val chargingMonitor: ChargingMonitor
 ) {
 
     @Volatile
@@ -41,14 +43,16 @@ class CableDiagnosticEngine @Inject constructor(
         } else emptyList()
 
         val rootData = tryReadRootData()
+        val batteryState = chargingMonitor.readCurrentState()
 
-        buildSnapshot(devices, ports, rootData)
+        buildSnapshot(devices, ports, rootData, batteryState)
     }
 
     fun buildSnapshot(
         devices: List<UsbDeviceInfo>,
         ports: List<UsbPortInfo>,
-        rootData: RootData? = null
+        rootData: RootData? = null,
+        batteryState: com.whatcable.android.data.charging.ChargingState? = null
     ): CableSnapshot {
         val hasRoot = rootData != null
         val tier = when {
@@ -97,7 +101,8 @@ class CableDiagnosticEngine @Inject constructor(
             connectedDevices = devices,
             trustScore = trust,
             complianceWarnings = complianceWarnings,
-            cableIdentity = rootData?.cableIdentity
+            cableIdentity = rootData?.cableIdentity,
+            batteryState = batteryState
         )
     }
 

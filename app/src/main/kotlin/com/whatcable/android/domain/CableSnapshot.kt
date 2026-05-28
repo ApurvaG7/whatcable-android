@@ -10,6 +10,7 @@ import com.whatcable.android.core.model.PowerRole
 import com.whatcable.android.core.model.UsbDeviceInfo
 import com.whatcable.android.core.model.UsbPortInfo
 import com.whatcable.android.core.model.UsbSpeedTier
+import com.whatcable.android.data.charging.ChargingState
 import com.whatcable.android.data.root.CableIdentityReader
 
 data class CableSnapshot(
@@ -22,13 +23,18 @@ data class CableSnapshot(
     val connectedDevices: List<UsbDeviceInfo> = emptyList(),
     val trustScore: TrustScore = TrustScore(),
     val complianceWarnings: List<ComplianceWarning> = emptyList(),
-    val cableIdentity: CableIdentityReader.CableIdentity? = null
+    val cableIdentity: CableIdentityReader.CableIdentity? = null,
+    val batteryState: ChargingState? = null
 ) {
     val isConnected: Boolean
         get() = portState?.isConnected == true || connectedDevices.isNotEmpty()
 
+    val isPluggedIn: Boolean
+        get() = isConnected || batteryState?.isCharging == true
+
     val summary: String
         get() = when {
+            !isConnected && batteryState?.isCharging == true -> "Charging via ${batteryState.plugType.label}"
             !isConnected -> "No cable connected"
             speed.tier != null -> "${speed.tier.label} cable"
             else -> "Cable connected"

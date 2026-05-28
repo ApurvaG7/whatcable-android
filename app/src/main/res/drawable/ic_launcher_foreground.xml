@@ -4,9 +4,27 @@
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
+
+    <!-- Connector tip (rounded rectangle, top portion) -->
     <path
-        android:fillColor="#FFFFFF"
-        android:pathData="M54,30 L54,78 M30,54 L78,54"
-        android:strokeWidth="6"
-        android:strokeColor="#FFFFFF" />
+        android:pathData="M46,28 L62,28 A4,4,0,0,1,66,32 L66,52 A4,4,0,0,1,62,56 L46,56 A4,4,0,0,1,42,52 L42,32 A4,4,0,0,1,46,28 Z"
+        android:fillColor="#FFFFFF" />
+
+    <!-- Inner tongue detail (darker inset) -->
+    <path
+        android:pathData="M50,33 L58,33 A2,2,0,0,1,60,35 L60,49 A2,2,0,0,1,58,51 L50,51 A2,2,0,0,1,48,49 L48,35 A2,2,0,0,1,50,33 Z"
+        android:fillColor="#3B6DD6"
+        android:fillAlpha="0.5" />
+
+    <!-- Neck / collar -->
+    <path
+        android:pathData="M49,56 L59,56 L59,63 L49,63 Z"
+        android:fillColor="#FFFFFF" />
+
+    <!-- Cable stem -->
+    <path
+        android:pathData="M54,63 L54,80"
+        android:strokeWidth="4.5"
+        android:strokeColor="#FFFFFF"
+        android:strokeLineCap="round" />
 </vector>

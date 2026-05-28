@@ -46,6 +46,7 @@ import com.whatcable.android.core.model.CapabilityTier
 import com.whatcable.android.core.model.ComplianceWarning
 import com.whatcable.android.core.model.PowerRole
 import com.whatcable.android.core.model.UsbDeviceInfo
+import com.whatcable.android.data.charging.ChargingState
 import com.whatcable.android.data.shizuku.ShizukuUsbPortReader
 import com.whatcable.android.domain.AltModeInfo
 import com.whatcable.android.domain.CableReportGenerator
@@ -74,7 +75,7 @@ fun HomeScreen(
         onRefresh = { viewModel.refresh() },
         modifier = modifier.fillMaxSize()
     ) {
-        if (!uiState.snapshot.isConnected && !uiState.isLoading) {
+        if (!uiState.snapshot.isPluggedIn && !uiState.isLoading) {
             EmptyState()
         } else {
             DashboardContent(
@@ -151,6 +152,10 @@ private fun DashboardContent(
 
         if (snapshot.charging.confidence != Confidence.NONE) {
             item { ChargingCard(snapshot.charging, onClick = onChargingClick) }
+        }
+
+        if (!snapshot.isConnected && snapshot.batteryState != null) {
+            item { BatteryCard(snapshot.batteryState, onClick = onChargingClick) }
         }
 
         if (snapshot.altModes.isNotEmpty()) {
@@ -384,6 +389,57 @@ private fun ChargingCard(charging: ChargingAssessment, onClick: () -> Unit = {})
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.error
                 )
+            }
+        }
+    }
+}
+
+@Composable
+private fun BatteryCard(state: ChargingState, onClick: () -> Unit = {}) {
+    Card(onClick = onClick, modifier = Modifier.fillMaxWidth()) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Text("Charging", style = MaterialTheme.typography.titleMedium)
+            Spacer(modifier = Modifier.height(8.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                Column {
+                    Text("Battery", style = MaterialTheme.typography.labelSmall)
+                    Text("${state.batteryPercent}%", style = MaterialTheme.typography.bodyMedium)
+                }
+                state.wattage?.let {
+                    Column {
+                        Text("Power", style = MaterialTheme.typography.labelSmall)
+                        Text("%.1fW".format(it), style = MaterialTheme.typography.bodyMedium)
+                    }
+                }
+                state.currentMa?.let {
+                    Column {
+                        Text("Current", style = MaterialTheme.typography.labelSmall)
+                        Text("${kotlin.math.abs(it)} mA", style = MaterialTheme.typography.bodyMedium)
+                    }
+                }
+                state.voltageMv?.let {
+                    Column {
+                        Text("Voltage", style = MaterialTheme.typography.labelSmall)
+                        Text("$it mV", style = MaterialTheme.typography.bodyMedium)
+                    }
+                }
+            }
+            Spacer(modifier = Modifier.height(4.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                Column {
+                    Text("Temp", style = MaterialTheme.typography.labelSmall)
+                    Text("%.1f C".format(state.temperatureCelsius), style = MaterialTheme.typography.bodyMedium)
+                }
+                Column {
+                    Text("Plug", style = MaterialTheme.typography.labelSmall)
+                    Text(state.plugType.label, style = MaterialTheme.typography.bodyMedium)
+                }
+                state.chargerType?.let {
+                    Column {
+                        Text("Type", style = MaterialTheme.typography.labelSmall)
+                        Text(it, style = MaterialTheme.typography.bodyMedium)
+                    }
+                }
             }
         }
     }
