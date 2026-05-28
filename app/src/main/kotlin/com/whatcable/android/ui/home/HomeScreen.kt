@@ -44,6 +44,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.whatcable.android.core.model.AltModeStatus
 import com.whatcable.android.core.model.CapabilityTier
 import com.whatcable.android.core.model.ComplianceWarning
+import com.whatcable.android.core.model.PowerRole
 import com.whatcable.android.core.model.UsbDeviceInfo
 import com.whatcable.android.data.shizuku.ShizukuUsbPortReader
 import com.whatcable.android.domain.AltModeInfo
@@ -353,8 +354,13 @@ private fun ChargingCard(charging: ChargingAssessment, onClick: () -> Unit = {})
                 ConfidenceDot(charging.confidence)
             }
             Spacer(modifier = Modifier.height(4.dp))
+            val powerLabel = when (charging.powerRole) {
+                PowerRole.SOURCE -> "Powering device"
+                PowerRole.SINK -> "Charging"
+                PowerRole.NONE -> if (charging.isCharging) "Charging" else "Not charging"
+            }
             Text(
-                text = charging.powerRole.label,
+                text = powerLabel,
                 style = MaterialTheme.typography.bodyLarge
             )
             if (charging.powerDeliverySupported) {
