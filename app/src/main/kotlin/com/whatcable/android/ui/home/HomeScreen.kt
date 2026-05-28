@@ -2,7 +2,6 @@ package com.whatcable.android.ui.home
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -55,7 +54,7 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.whatcable.android.core.model.AltModeStatus
-import com.whatcable.android.core.model.CapabilityTier
+import com.whatcable.android.core.model.BosCapability
 import com.whatcable.android.core.model.ComplianceWarning
 import com.whatcable.android.core.model.PowerRole
 import com.whatcable.android.core.model.UsbDeviceInfo
@@ -65,7 +64,6 @@ import com.whatcable.android.domain.AltModeInfo
 import com.whatcable.android.domain.CableReportGenerator
 import com.whatcable.android.domain.CableSnapshot
 import com.whatcable.android.domain.ChargingAssessment
-import com.whatcable.android.domain.Confidence
 import com.whatcable.android.domain.PortState
 import com.whatcable.android.domain.SpeedClassification
 import com.whatcable.android.domain.TrustRating
@@ -80,11 +78,15 @@ fun HomeScreen(
     onDeviceClick: (String) -> Unit = {},
     onShareReport: (String) -> Unit = {},
     onChargingClick: () -> Unit = {},
-    onTierClick: () -> Unit = {},
     modifier: Modifier = Modifier,
     viewModel: HomeViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+
+    if (!uiState.hasRoot && !uiState.isLoading) {
+        RootRequiredScreen()
+        return
+    }
 
     PullToRefreshBox(
         isRefreshing = uiState.isLoading,
@@ -98,8 +100,7 @@ fun HomeScreen(
                 snapshot = uiState.snapshot,
                 onDeviceClick = onDeviceClick,
                 onShareReport = onShareReport,
-                onChargingClick = onChargingClick,
-                onTierClick = onTierClick
+                onChargingClick = onChargingClick
             )
         }
     }
@@ -172,8 +173,7 @@ private fun DashboardContent(
     snapshot: CableSnapshot,
     onDeviceClick: (String) -> Unit,
     onShareReport: (String) -> Unit,
-    onChargingClick: () -> Unit,
-    onTierClick: () -> Unit
+    onChargingClick: () -> Unit
 ) {
     LazyColumn(
         modifier = Modifier
@@ -184,7 +184,7 @@ private fun DashboardContent(
         item { Spacer(modifier = Modifier.height(8.dp)) }
 
         item {
-            HeaderRow(snapshot.capabilityTier, onShareReport = onShareReport, snapshot = snapshot, onTierClick = onTierClick)
+            HeaderRow(onShareReport = onShareReport, snapshot = snapshot)
         }
 
         item {
@@ -192,14 +192,14 @@ private fun DashboardContent(
         }
 
         if (snapshot.speed.tier != null) {
-            item { SpeedCard(snapshot.speed) }
+            item { SpeedCard(snapshot.speed, snapshot.connectedDevices) }
         }
 
         if (snapshot.portState != null) {
             item { PortStateCard(snapshot.portState) }
         }
 
-        if (snapshot.charging.confidence != Confidence.NONE) {
+        if (snapshot.connectedDevices.isNotEmpty() || snapshot.charging.isCharging) {
             item { ChargingCard(snapshot.charging, hasDevices = snapshot.connectedDevices.isNotEmpty(), onClick = onChargingClick) }
         }
 
@@ -244,10 +244,8 @@ private fun DashboardContent(
 
 @Composable
 private fun HeaderRow(
-    tier: CapabilityTier,
     onShareReport: (String) -> Unit,
-    snapshot: CableSnapshot,
-    onTierClick: () -> Unit
+    snapshot: CableSnapshot
 ) {
     Row(
         modifier = Modifier.fillMaxWidth(),
@@ -261,24 +259,18 @@ private fun HeaderRow(
             color = MaterialTheme.colorScheme.onSurface,
             letterSpacing = (-0.5).sp
         )
-        Row(
-            horizontalArrangement = Arrangement.spacedBy(4.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            if (snapshot.isConnected) {
-                IconButton(onClick = {
-                    val report = CableReportGenerator().generate(snapshot)
-                    onShareReport(report)
-                }) {
-                    Icon(
-                        Icons.Default.Share,
-                        contentDescription = "Share report",
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.size(20.dp)
-                    )
-                }
+        if (snapshot.isConnected) {
+            IconButton(onClick = {
+                val report = CableReportGenerator().generate(snapshot)
+                onShareReport(report)
+            }) {
+                Icon(
+                    Icons.Default.Share,
+                    contentDescription = "Share report",
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.size(20.dp)
+                )
             }
-            TierBadge(tier, onClick = onTierClick)
         }
     }
 }
@@ -300,23 +292,72 @@ private fun HeroSection(snapshot: CableSnapshot) {
 }
 
 @Composable
-private fun TierBadge(tier: CapabilityTier, onClick: () -> Unit = {}) {
-    val color = when (tier) {
-        CapabilityTier.BASIC -> MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
-        CapabilityTier.FULL -> Green60
-    }
-    Text(
-        text = tier.label.uppercase(),
-        fontSize = 10.sp,
-        fontWeight = FontWeight.Bold,
-        color = color,
-        letterSpacing = 1.sp,
+private fun RootRequiredScreen() {
+    val glowBlue = Blue40
+    Box(
         modifier = Modifier
-            .clip(RoundedCornerShape(4.dp))
-            .border(1.dp, color.copy(alpha = 0.4f), RoundedCornerShape(4.dp))
-            .clickable { onClick() }
-            .padding(horizontal = 8.dp, vertical = 3.dp)
-    )
+            .fillMaxSize()
+            .drawBehind {
+                drawCircle(
+                    brush = Brush.radialGradient(
+                        colors = listOf(glowBlue.copy(alpha = 0.08f), Color.Transparent),
+                        center = Offset(size.width / 2, size.height * 0.35f),
+                        radius = size.width * 0.6f
+                    ),
+                    radius = size.width * 0.6f,
+                    center = Offset(size.width / 2, size.height * 0.35f)
+                )
+            },
+        contentAlignment = Alignment.Center
+    ) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            modifier = Modifier.padding(48.dp)
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(96.dp)
+                    .clip(CircleShape)
+                    .border(
+                        2.dp,
+                        Brush.linearGradient(listOf(Color(0xFFF87171), Color(0xFFFBBF24))),
+                        CircleShape
+                    )
+                    .background(Color(0xFFF87171).copy(alpha = 0.06f)),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = "ROOT",
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color(0xFFF87171),
+                    letterSpacing = 2.sp
+                )
+            }
+            Spacer(modifier = Modifier.height(32.dp))
+            Text(
+                text = "Root Required",
+                fontSize = 28.sp,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurface,
+                letterSpacing = (-0.5).sp
+            )
+            Spacer(modifier = Modifier.height(12.dp))
+            Text(
+                text = "WhatCable reads USB-C cable data directly from the kernel's typec subsystem. This requires root access via Magisk, KernelSU, or APatch.",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                textAlign = TextAlign.Center
+            )
+            Spacer(modifier = Modifier.height(24.dp))
+            Text(
+                text = "Cable identity, speed capability, orientation, alt modes, and power roles are read from /sys/class/typec/ which is only accessible with superuser permissions.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+                textAlign = TextAlign.Center
+            )
+        }
+    }
 }
 
 @OptIn(ExperimentalLayoutApi::class)
@@ -495,10 +536,17 @@ private fun MetricColumn(label: String, value: String) {
 }
 
 @Composable
-private fun SpeedCard(speed: SpeedClassification) {
+private fun SpeedCard(speed: SpeedClassification, devices: List<UsbDeviceInfo> = emptyList()) {
+    val ssPlus = devices.firstNotNullOfOrNull { device ->
+        device.bosDescriptor?.capabilities?.filterIsInstance<BosCapability.SuperSpeedPlus>()?.firstOrNull()
+    }
+    val ss = devices.firstNotNullOfOrNull { device ->
+        device.bosDescriptor?.capabilities?.filterIsInstance<BosCapability.SuperSpeed>()?.firstOrNull()
+    }
+
     AccentCard(accentColor = Blue60) {
         Column {
-            CardTitle("Speed") { ConfidenceDot(speed.confidence) }
+            CardTitle("Speed")
             Spacer(modifier = Modifier.height(8.dp))
             speed.tier?.let { tier ->
                 Text(
@@ -524,6 +572,30 @@ private fun SpeedCard(speed: SpeedClassification) {
                     )
                 }
             }
+
+            if (ssPlus != null && ssPlus.subLinkSpeedAttributes.isNotEmpty()) {
+                Spacer(modifier = Modifier.height(8.dp))
+                ssPlus.subLinkSpeedAttributes.forEach { link ->
+                    Text(
+                        text = "${link.direction.name} ${"%.1f".format(link.speedGbps)} Gbps x${link.laneCount} lane",
+                        fontSize = 11.sp,
+                        fontFamily = FontFamily.Monospace,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+                    )
+                }
+            } else if (ss != null) {
+                Spacer(modifier = Modifier.height(8.dp))
+                val speeds = mutableListOf<String>()
+                if (ss.supportsGen1) speeds.add("Gen 1 (5 Gbps)")
+                if (ss.supportsGen2) speeds.add("Gen 2 (10 Gbps)")
+                Text(
+                    text = speeds.joinToString(", "),
+                    fontSize = 11.sp,
+                    fontFamily = FontFamily.Monospace,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+                )
+            }
+
             if (speed.sources.isNotEmpty()) {
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
@@ -542,16 +614,12 @@ private fun ChargingCard(charging: ChargingAssessment, hasDevices: Boolean = fal
     AccentCard(accentColor = accentColor, onClick = onClick) {
         Column {
             CardTitle("Power") {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    ConfidenceDot(charging.confidence)
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Icon(
-                        Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
-                        modifier = Modifier.size(18.dp)
-                    )
-                }
+                Icon(
+                    Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
+                    modifier = Modifier.size(18.dp)
+                )
             }
             Spacer(modifier = Modifier.height(8.dp))
             val powerLabel = when (charging.powerRole) {
@@ -762,30 +830,6 @@ private fun ComplianceCard(warnings: List<ComplianceWarning>) {
     }
 }
 
-@Composable
-private fun ConfidenceDot(confidence: Confidence) {
-    val color = when (confidence) {
-        Confidence.HIGH -> Green60
-        Confidence.MEDIUM -> Color(0xFFFBBF24)
-        Confidence.LOW -> MaterialTheme.colorScheme.outline
-        Confidence.NONE -> MaterialTheme.colorScheme.outlineVariant
-    }
-    Row(verticalAlignment = Alignment.CenterVertically) {
-        Box(
-            modifier = Modifier
-                .size(6.dp)
-                .clip(CircleShape)
-                .background(color)
-        )
-        Spacer(modifier = Modifier.width(4.dp))
-        Text(
-            text = confidence.name.lowercase(),
-            fontSize = 10.sp,
-            fontWeight = FontWeight.Medium,
-            color = color.copy(alpha = 0.8f)
-        )
-    }
-}
 
 @Composable
 private fun CableIdentityCard(identity: CableIdentityReader.CableIdentity) {

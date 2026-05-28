@@ -4,6 +4,8 @@ import android.hardware.usb.UsbDevice
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.whatcable.android.data.charging.ChargingMonitor
+import com.whatcable.android.data.root.RootChecker
+import com.whatcable.android.data.root.SuExecutor
 import com.whatcable.android.data.usb.UsbEvent
 import com.whatcable.android.data.usb.UsbHostScanner
 import com.whatcable.android.domain.CableDiagnosticEngine
@@ -20,15 +22,16 @@ import javax.inject.Inject
 class HomeViewModel @Inject constructor(
     private val usbScanner: UsbHostScanner,
     private val chargingMonitor: ChargingMonitor,
-    private val diagnosticEngine: CableDiagnosticEngine
+    private val diagnosticEngine: CableDiagnosticEngine,
+    private val rootChecker: RootChecker,
+    private val suExecutor: SuExecutor
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(HomeUiState())
     val uiState: StateFlow<HomeUiState> = _uiState.asStateFlow()
 
-    private var lastChargingState: Boolean? = null
-
     init {
+        checkRoot()
         observeUsbEvents()
         observeChargingState()
         refresh()
@@ -52,6 +55,13 @@ class HomeViewModel @Inject constructor(
         }
     }
 
+    private fun checkRoot() {
+        viewModelScope.launch {
+            val hasRoot = rootChecker.isRooted && suExecutor.isAvailable()
+            _uiState.value = _uiState.value.copy(hasRoot = hasRoot)
+        }
+    }
+
     private fun observeUsbEvents() {
         viewModelScope.launch {
             usbScanner.observeUsbEvents().collect { event ->
@@ -64,6 +74,7 @@ class HomeViewModel @Inject constructor(
     }
 
     private fun observeChargingState() {
+        var lastChargingState: Boolean? = null
         viewModelScope.launch {
             chargingMonitor.observeCharging().collect { state ->
                 if (lastChargingState != null && lastChargingState != state.isCharging) {
@@ -77,5 +88,6 @@ class HomeViewModel @Inject constructor(
 
 data class HomeUiState(
     val snapshot: CableSnapshot = CableSnapshot(),
+    val hasRoot: Boolean = false,
     val isLoading: Boolean = false
 )

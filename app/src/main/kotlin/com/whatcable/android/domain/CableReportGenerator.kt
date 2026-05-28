@@ -15,7 +15,6 @@ class CableReportGenerator @Inject constructor() {
         appendLine("================")
         val dateFormat = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.US)
         appendLine("Generated: ${dateFormat.format(Date(snapshot.timestamp))}")
-        appendLine("Capability tier: ${snapshot.capabilityTier.label}")
         appendLine()
 
         appendLine("## Summary")

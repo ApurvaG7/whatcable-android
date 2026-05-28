@@ -1,7 +1,6 @@
 package com.whatcable.android.domain
 
 import com.whatcable.android.core.model.AltModeStatus
-import com.whatcable.android.core.model.CapabilityTier
 import com.whatcable.android.core.model.DataRole
 import com.whatcable.android.core.model.PortMode
 import com.whatcable.android.core.model.PortOrientation
@@ -50,8 +49,6 @@ class CableDiagnosticEngine @Inject constructor(
         rootData: RootData? = null,
         batteryState: com.whatcable.android.data.charging.ChargingState? = null
     ): CableSnapshot {
-        val tier = if (rootData != null) CapabilityTier.FULL else CapabilityTier.BASIC
-
         var speed = speedClassifier.classify(devices, null)
         if (rootData?.cableIdentity?.maxSpeedGbps != null) {
             val rootSpeed = speedFromGbps(rootData.cableIdentity.maxSpeedGbps)
@@ -95,7 +92,6 @@ class CableDiagnosticEngine @Inject constructor(
         }
 
         return CableSnapshot(
-            capabilityTier = tier,
             speed = speed,
             charging = charging,
             altModes = altModes,

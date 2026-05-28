@@ -1,7 +1,6 @@
 package com.whatcable.android.domain
 
 import com.whatcable.android.core.model.AltModeStatus
-import com.whatcable.android.core.model.CapabilityTier
 import com.whatcable.android.core.model.ComplianceWarning
 import com.whatcable.android.core.model.DataRole
 import com.whatcable.android.core.model.PortMode
@@ -15,7 +14,6 @@ import com.whatcable.android.data.root.CableIdentityReader
 
 data class CableSnapshot(
     val timestamp: Long = System.currentTimeMillis(),
-    val capabilityTier: CapabilityTier = CapabilityTier.BASIC,
     val speed: SpeedClassification = SpeedClassification(),
     val charging: ChargingAssessment = ChargingAssessment(),
     val altModes: List<AltModeInfo> = emptyList(),
