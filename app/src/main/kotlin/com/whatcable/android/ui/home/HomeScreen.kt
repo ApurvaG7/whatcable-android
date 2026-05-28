@@ -195,7 +195,7 @@ private fun DashboardContent(
         }
 
         if (snapshot.charging.confidence != Confidence.NONE) {
-            item { ChargingCard(snapshot.charging, onClick = onChargingClick) }
+            item { ChargingCard(snapshot.charging, hasDevices = snapshot.connectedDevices.isNotEmpty(), onClick = onChargingClick) }
         }
 
         if (!snapshot.isConnected && snapshot.batteryState != null) {
@@ -526,7 +526,7 @@ private fun SpeedCard(speed: SpeedClassification) {
 }
 
 @Composable
-private fun ChargingCard(charging: ChargingAssessment, onClick: () -> Unit = {}) {
+private fun ChargingCard(charging: ChargingAssessment, hasDevices: Boolean = false, onClick: () -> Unit = {}) {
     val accentColor = if (charging.isCharging) Green60 else MaterialTheme.colorScheme.onSurfaceVariant
     AccentCard(accentColor = accentColor, onClick = onClick) {
         Column {
@@ -546,7 +546,11 @@ private fun ChargingCard(charging: ChargingAssessment, onClick: () -> Unit = {})
             val powerLabel = when (charging.powerRole) {
                 PowerRole.SOURCE -> "Powering device"
                 PowerRole.SINK -> "Charging"
-                PowerRole.NONE -> if (charging.isCharging) "Charging" else "Not charging"
+                PowerRole.NONE -> when {
+                    charging.isCharging -> "Charging"
+                    hasDevices -> "Powering device"
+                    else -> "Not charging"
+                }
             }
             Text(
                 text = powerLabel,

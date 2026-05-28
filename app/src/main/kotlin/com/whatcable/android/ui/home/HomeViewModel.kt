@@ -3,6 +3,7 @@ package com.whatcable.android.ui.home
 import android.hardware.usb.UsbDevice
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.whatcable.android.data.charging.ChargingMonitor
 import com.whatcable.android.data.usb.UsbEvent
 import com.whatcable.android.data.usb.UsbHostScanner
 import com.whatcable.android.domain.CableDiagnosticEngine
@@ -18,14 +19,18 @@ import javax.inject.Inject
 @HiltViewModel
 class HomeViewModel @Inject constructor(
     private val usbScanner: UsbHostScanner,
+    private val chargingMonitor: ChargingMonitor,
     private val diagnosticEngine: CableDiagnosticEngine
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(HomeUiState())
     val uiState: StateFlow<HomeUiState> = _uiState.asStateFlow()
 
+    private var lastChargingState: Boolean? = null
+
     init {
         observeUsbEvents()
+        observeChargingState()
         refresh()
     }
 
@@ -54,6 +59,17 @@ class HomeViewModel @Inject constructor(
                     is UsbEvent.Attached -> refresh()
                     is UsbEvent.Detached -> refresh()
                 }
+            }
+        }
+    }
+
+    private fun observeChargingState() {
+        viewModelScope.launch {
+            chargingMonitor.observeCharging().collect { state ->
+                if (lastChargingState != null && lastChargingState != state.isCharging) {
+                    refresh()
+                }
+                lastChargingState = state.isCharging
             }
         }
     }
