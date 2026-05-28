@@ -70,9 +70,6 @@ dependencies {
     implementation(libs.coroutines.core)
     implementation(libs.coroutines.android)
 
-    implementation(libs.shizuku.api)
-    implementation(libs.shizuku.provider)
-
     compileOnly(project(":hidden-api-stub"))
     implementation(libs.hidden.api.bypass)
 }

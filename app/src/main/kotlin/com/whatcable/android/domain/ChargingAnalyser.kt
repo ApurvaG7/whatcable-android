@@ -48,7 +48,7 @@ class ChargingAnalyser @Inject constructor() {
             if (portInfo.powerRole != PowerRole.NONE) return true
         }
 
-        // Without Shizuku port data, we can't confirm PD from device descriptors alone
+        // Without system-level port data, we can't confirm PD from device descriptors alone
         return false
     }
 

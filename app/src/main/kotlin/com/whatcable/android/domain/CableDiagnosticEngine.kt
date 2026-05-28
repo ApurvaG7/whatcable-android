@@ -2,8 +2,11 @@ package com.whatcable.android.domain
 
 import com.whatcable.android.core.model.AltModeStatus
 import com.whatcable.android.core.model.CapabilityTier
+import com.whatcable.android.core.model.DataRole
+import com.whatcable.android.core.model.PortMode
+import com.whatcable.android.core.model.PortOrientation
+import com.whatcable.android.core.model.PowerRole
 import com.whatcable.android.core.model.UsbDeviceInfo
-import com.whatcable.android.core.model.UsbPortInfo
 import com.whatcable.android.core.model.UsbSpeedTier
 import com.whatcable.android.data.charging.ChargingMonitor
 import com.whatcable.android.data.root.AltModeReader
@@ -11,7 +14,6 @@ import com.whatcable.android.data.root.CableIdentityReader
 import com.whatcable.android.data.root.RootChecker
 import com.whatcable.android.data.root.SuExecutor
 import com.whatcable.android.data.root.TypeCPortReader
-import com.whatcable.android.data.shizuku.ShizukuUsbPortReader
 import com.whatcable.android.data.usb.UsbHostScanner
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -21,7 +23,6 @@ import javax.inject.Singleton
 @Singleton
 class CableDiagnosticEngine @Inject constructor(
     private val usbScanner: UsbHostScanner,
-    private val shizukuPortReader: ShizukuUsbPortReader,
     private val speedClassifier: SpeedClassifier,
     private val chargingAnalyser: ChargingAnalyser,
     private val trustScorer: TrustScorer,
@@ -38,32 +39,20 @@ class CableDiagnosticEngine @Inject constructor(
 
     suspend fun diagnose(): CableSnapshot = withContext(Dispatchers.IO) {
         val devices = usbScanner.scan()
-        val ports = if (shizukuPortReader.hasPermission()) {
-            shizukuPortReader.readPorts()
-        } else emptyList()
-
         val rootData = tryReadRootData()
         val batteryState = chargingMonitor.readCurrentState()
 
-        buildSnapshot(devices, ports, rootData, batteryState)
+        buildSnapshot(devices, rootData, batteryState)
     }
 
     fun buildSnapshot(
         devices: List<UsbDeviceInfo>,
-        ports: List<UsbPortInfo>,
         rootData: RootData? = null,
         batteryState: com.whatcable.android.data.charging.ChargingState? = null
     ): CableSnapshot {
-        val hasRoot = rootData != null
-        val tier = when {
-            hasRoot -> CapabilityTier.FULL
-            shizukuPortReader.hasPermission() -> CapabilityTier.ENHANCED
-            else -> CapabilityTier.BASIC
-        }
+        val tier = if (rootData != null) CapabilityTier.FULL else CapabilityTier.BASIC
 
-        val primaryPort = ports.firstOrNull { it.isConnected } ?: ports.firstOrNull()
-
-        var speed = speedClassifier.classify(devices, primaryPort)
+        var speed = speedClassifier.classify(devices, null)
         if (rootData?.cableIdentity?.maxSpeedGbps != null) {
             val rootSpeed = speedFromGbps(rootData.cableIdentity.maxSpeedGbps)
             if (rootSpeed != null && (speed.tier == null || rootSpeed.gbps > speed.tier.gbps)) {
@@ -75,22 +64,35 @@ class CableDiagnosticEngine @Inject constructor(
             }
         }
 
-        val charging = chargingAnalyser.assess(primaryPort, devices)
-        val trust = trustScorer.score(devices, primaryPort, speed)
+        val charging = chargingAnalyser.assess(null, devices)
+        val trust = trustScorer.score(devices, null, speed)
 
         val altModes = mergeAltModes(devices, rootData)
 
-        val portState = primaryPort?.let {
+        val portState = rootData?.portState?.let { state ->
+            val orientation = when (state.orientation) {
+                "normal" -> PortOrientation.NORMAL
+                "reversed" -> PortOrientation.FLIPPED
+                else -> PortOrientation.UNKNOWN
+            }
+            val powerRole = when {
+                state.powerRole?.contains("source") == true -> PowerRole.SOURCE
+                state.powerRole?.contains("sink") == true -> PowerRole.SINK
+                else -> PowerRole.NONE
+            }
+            val dataRole = when {
+                state.dataRole?.contains("host") == true -> DataRole.HOST
+                state.dataRole?.contains("device") == true -> DataRole.DEVICE
+                else -> DataRole.NONE
+            }
             PortState(
-                isConnected = it.isConnected,
-                mode = it.mode,
-                powerRole = it.powerRole,
-                dataRole = it.dataRole,
-                orientation = it.orientation
+                isConnected = true,
+                mode = PortMode.DRP,
+                powerRole = powerRole,
+                dataRole = dataRole,
+                orientation = orientation
             )
         }
-
-        val complianceWarnings = ports.flatMap { it.complianceWarnings }.distinct()
 
         return CableSnapshot(
             capabilityTier = tier,
@@ -100,7 +102,7 @@ class CableDiagnosticEngine @Inject constructor(
             portState = portState,
             connectedDevices = devices,
             trustScore = trust,
-            complianceWarnings = complianceWarnings,
+            complianceWarnings = emptyList(),
             cableIdentity = rootData?.cableIdentity,
             batteryState = batteryState
         )

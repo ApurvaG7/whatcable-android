@@ -3,7 +3,6 @@ package com.whatcable.android.ui.home
 import android.hardware.usb.UsbDevice
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.whatcable.android.data.shizuku.ShizukuUsbPortReader
 import com.whatcable.android.data.usb.UsbEvent
 import com.whatcable.android.data.usb.UsbHostScanner
 import com.whatcable.android.domain.CableDiagnosticEngine
@@ -19,7 +18,6 @@ import javax.inject.Inject
 @HiltViewModel
 class HomeViewModel @Inject constructor(
     private val usbScanner: UsbHostScanner,
-    private val shizukuPortReader: ShizukuUsbPortReader,
     private val diagnosticEngine: CableDiagnosticEngine
 ) : ViewModel() {
 
@@ -27,15 +25,8 @@ class HomeViewModel @Inject constructor(
     val uiState: StateFlow<HomeUiState> = _uiState.asStateFlow()
 
     init {
-        shizukuPortReader.init()
         observeUsbEvents()
-        observeShizukuState()
         refresh()
-    }
-
-    override fun onCleared() {
-        super.onCleared()
-        shizukuPortReader.destroy()
     }
 
     fun refresh() {
@@ -44,7 +35,6 @@ class HomeViewModel @Inject constructor(
             val snapshot = diagnosticEngine.diagnose()
             _uiState.value = _uiState.value.copy(
                 snapshot = snapshot,
-                shizukuState = shizukuPortReader.state.value,
                 isLoading = false
             )
         }
@@ -67,21 +57,9 @@ class HomeViewModel @Inject constructor(
             }
         }
     }
-
-    private fun observeShizukuState() {
-        viewModelScope.launch {
-            shizukuPortReader.state.collect { state ->
-                if (state == ShizukuUsbPortReader.ShizukuState.Ready) {
-                    refresh()
-                }
-                _uiState.value = _uiState.value.copy(shizukuState = state)
-            }
-        }
-    }
 }
 
 data class HomeUiState(
     val snapshot: CableSnapshot = CableSnapshot(),
-    val shizukuState: ShizukuUsbPortReader.ShizukuState = ShizukuUsbPortReader.ShizukuState.NotRunning,
     val isLoading: Boolean = false
 )

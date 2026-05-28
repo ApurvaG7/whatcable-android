@@ -31,7 +31,6 @@ import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedCard
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -51,7 +50,6 @@ import com.whatcable.android.core.model.ComplianceWarning
 import com.whatcable.android.core.model.PowerRole
 import com.whatcable.android.core.model.UsbDeviceInfo
 import com.whatcable.android.data.charging.ChargingState
-import com.whatcable.android.data.shizuku.ShizukuUsbPortReader
 import com.whatcable.android.domain.AltModeInfo
 import com.whatcable.android.domain.CableReportGenerator
 import com.whatcable.android.domain.CableSnapshot
@@ -68,7 +66,6 @@ fun HomeScreen(
     onDeviceClick: (String) -> Unit = {},
     onShareReport: (String) -> Unit = {},
     onChargingClick: () -> Unit = {},
-    onShizukuSetup: () -> Unit = {},
     modifier: Modifier = Modifier,
     viewModel: HomeViewModel = hiltViewModel()
 ) {
@@ -84,8 +81,6 @@ fun HomeScreen(
         } else {
             DashboardContent(
                 snapshot = uiState.snapshot,
-                shizukuState = uiState.shizukuState,
-                onShizukuSetup = onShizukuSetup,
                 onDeviceClick = onDeviceClick,
                 onShareReport = onShareReport,
                 onChargingClick = onChargingClick
@@ -138,8 +133,6 @@ private fun EmptyState() {
 @Composable
 private fun DashboardContent(
     snapshot: CableSnapshot,
-    shizukuState: ShizukuUsbPortReader.ShizukuState,
-    onShizukuSetup: () -> Unit,
     onDeviceClick: (String) -> Unit,
     onShareReport: (String) -> Unit,
     onChargingClick: () -> Unit
@@ -192,10 +185,6 @@ private fun DashboardContent(
 
         if (snapshot.complianceWarnings.isNotEmpty()) {
             item { ComplianceCard(snapshot.complianceWarnings) }
-        }
-
-        if (shizukuState != ShizukuUsbPortReader.ShizukuState.Ready) {
-            item { ShizukuPrompt(shizukuState, onShizukuSetup) }
         }
 
         if (snapshot.connectedDevices.isNotEmpty()) {
@@ -255,7 +244,6 @@ private fun HeaderRow(
 private fun TierBadge(tier: CapabilityTier) {
     val color = when (tier) {
         CapabilityTier.BASIC -> MaterialTheme.colorScheme.outline
-        CapabilityTier.ENHANCED -> MaterialTheme.colorScheme.primary
         CapabilityTier.FULL -> MaterialTheme.colorScheme.tertiary
     }
     Text(
@@ -659,35 +647,6 @@ private fun ConfidenceDot(confidence: Confidence) {
             style = MaterialTheme.typography.labelSmall,
             color = color
         )
-    }
-}
-
-@Composable
-private fun ShizukuPrompt(
-    state: ShizukuUsbPortReader.ShizukuState,
-    onSetup: () -> Unit
-) {
-    OutlinedCard(modifier = Modifier.fillMaxWidth()) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            val message = when (state) {
-                ShizukuUsbPortReader.ShizukuState.NotInstalled ->
-                    "Install Shizuku for enhanced USB-C port diagnostics (orientation, power delivery, compliance)"
-                ShizukuUsbPortReader.ShizukuState.NotRunning ->
-                    "Start Shizuku to unlock enhanced port diagnostics"
-                ShizukuUsbPortReader.ShizukuState.PermissionDenied ->
-                    "Grant Shizuku permission for enhanced port diagnostics"
-                else -> ""
-            }
-            Text(
-                text = message,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            Spacer(modifier = Modifier.height(8.dp))
-            TextButton(onClick = onSetup) {
-                Text("Set up Shizuku")
-            }
-        }
     }
 }
 
