@@ -1,9 +1,9 @@
 package com.whatcable.android.domain
 
 import com.whatcable.android.data.charging.ChargingMonitor
-import com.whatcable.android.data.charging.ChargingState
-import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.withTimeoutOrNull
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.ensureActive
+import kotlinx.coroutines.currentCoroutineContext
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -52,8 +52,13 @@ class CableTestRecorder @Inject constructor(
     }
 
     /**
-     * Collect charging samples for [durationMs], reporting [onProgress] as they
-     * arrive, then summarise. Cancellable by cancelling the calling coroutine.
+     * Sample charging power on a fixed timer for [durationMs], reporting
+     * [onProgress] each tick, then summarise. Polling (rather than listening for
+     * ACTION_BATTERY_CHANGED) is deliberate: the broadcast only fires when
+     * something changes, so on a steady or near-full charge it can stay silent
+     * and the dial would look frozen. Reading the current sensor on a clock gives
+     * a smooth dial and a reliable sample count regardless of charge state.
+     * Cancellable by cancelling the calling coroutine.
      */
     suspend fun record(
         durationMs: Long,
@@ -67,27 +72,28 @@ class CableTestRecorder @Inject constructor(
         val watts = mutableListOf<Double>()
         var endBattery = startBattery
         var peak = 0.0
-        val startElapsed = nowMs
 
-        // The recorder is time-bounded; we stop collecting once the window passes.
-        withTimeoutOrNull(durationMs) {
-            chargingMonitor.observeCharging().collect { state: ChargingState ->
-                endBattery = state.batteryPercent
-                val w = state.wattage
-                if (w != null && w > 0) {
-                    watts.add(w)
-                    if (w > peak) peak = w
-                }
-                onProgress(
-                    Progress(
-                        elapsedMs = (startElapsed + watts.size).coerceAtMost(durationMs),
-                        durationMs = durationMs,
-                        latestWatts = w,
-                        peakWatts = peak,
-                        sampleCount = watts.size
-                    )
-                )
+        var elapsed = 0L
+        while (elapsed < durationMs) {
+            currentCoroutineContext().ensureActive()
+            val state = chargingMonitor.readCurrentState()
+            val w = state?.wattage
+            if (state != null) endBattery = state.batteryPercent
+            if (w != null && w > 0) {
+                watts.add(w)
+                if (w > peak) peak = w
             }
+            onProgress(
+                Progress(
+                    elapsedMs = elapsed,
+                    durationMs = durationMs,
+                    latestWatts = w,
+                    peakWatts = peak,
+                    sampleCount = watts.size
+                )
+            )
+            delay(SAMPLE_INTERVAL_MS)
+            elapsed += SAMPLE_INTERVAL_MS
         }
 
         if (watts.isEmpty()) return Outcome.NoData
@@ -118,5 +124,10 @@ class CableTestRecorder @Inject constructor(
         val sorted = watts.sorted()
         val topHalf = sorted.subList(sorted.size / 2, sorted.size)
         return topHalf.average()
+    }
+
+    companion object {
+        /** How often the charging sensor is polled during a test. */
+        const val SAMPLE_INTERVAL_MS = 1_000L
     }
 }
