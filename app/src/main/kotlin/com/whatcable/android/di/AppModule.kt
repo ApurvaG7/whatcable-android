@@ -3,6 +3,7 @@ package com.whatcable.android.di
 import android.content.Context
 import android.hardware.usb.UsbManager
 import androidx.room.Room
+import com.whatcable.android.data.db.CableTestDao
 import com.whatcable.android.data.db.ChargingSampleDao
 import com.whatcable.android.data.db.WhatCableDatabase
 import dagger.Module
@@ -35,5 +36,10 @@ object AppModule {
     @Provides
     fun provideChargingSampleDao(db: WhatCableDatabase): ChargingSampleDao {
         return db.chargingSampleDao()
+    }
+
+    @Provides
+    fun provideCableTestDao(db: WhatCableDatabase): CableTestDao {
+        return db.cableTestDao()
     }
 }

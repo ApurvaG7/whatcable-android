@@ -77,6 +77,7 @@ fun HomeScreen(
     onDeviceClick: (String) -> Unit = {},
     onShareReport: (String) -> Unit = {},
     onChargingClick: () -> Unit = {},
+    onCableTestClick: () -> Unit = {},
     modifier: Modifier = Modifier,
     viewModel: HomeViewModel = hiltViewModel()
 ) {
@@ -94,7 +95,8 @@ fun HomeScreen(
                 snapshot = uiState.snapshot,
                 onDeviceClick = onDeviceClick,
                 onShareReport = onShareReport,
-                onChargingClick = onChargingClick
+                onChargingClick = onChargingClick,
+                onCableTestClick = onCableTestClick
             )
         }
     }
@@ -167,7 +169,8 @@ private fun DashboardContent(
     snapshot: CableSnapshot,
     onDeviceClick: (String) -> Unit,
     onShareReport: (String) -> Unit,
-    onChargingClick: () -> Unit
+    onChargingClick: () -> Unit,
+    onCableTestClick: () -> Unit
 ) {
     LazyColumn(
         modifier = Modifier
@@ -199,6 +202,10 @@ private fun DashboardContent(
 
         if (!snapshot.isConnected && snapshot.batteryState != null) {
             item { BatteryCard(snapshot.batteryState, onClick = onChargingClick) }
+        }
+
+        if (snapshot.batteryState?.isCharging == true) {
+            item { CableTestEntryCard(onClick = onCableTestClick) }
         }
 
         // Cable quality is derived purely from USB descriptors, so it only means
@@ -585,6 +592,28 @@ private fun ChargingCard(charging: ChargingAssessment, hasDevices: Boolean = fal
                     letterSpacing = 1.sp
                 )
             }
+        }
+    }
+}
+
+@Composable
+private fun CableTestEntryCard(onClick: () -> Unit) {
+    AccentCard(accentColor = Blue60, onClick = onClick) {
+        Column {
+            CardTitle("Compare Cables") {
+                Icon(
+                    Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
+                    modifier = Modifier.size(18.dp)
+                )
+            }
+            Spacer(modifier = Modifier.height(6.dp))
+            Text(
+                text = "Measure this cable's charging power and rank it against your others.",
+                fontSize = 13.sp,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
         }
     }
 }

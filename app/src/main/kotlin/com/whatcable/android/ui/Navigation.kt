@@ -9,6 +9,7 @@ import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
+import com.whatcable.android.ui.cabletest.CableTestScreen
 import com.whatcable.android.ui.charging.ChargingScreen
 import com.whatcable.android.ui.detail.DeviceDetailScreen
 import com.whatcable.android.ui.home.HomeScreen
@@ -41,12 +42,17 @@ fun WhatCableNavHost(
                     }
                     context.startActivity(Intent.createChooser(intent, "Share cable report"))
                 },
-                onChargingClick = { navController.navigate("charging") }
+                onChargingClick = { navController.navigate("charging") },
+                onCableTestClick = { navController.navigate("cabletest") }
             )
         }
 
         composable("charging") {
             ChargingScreen(onBack = { navController.popBackStack() })
+        }
+
+        composable("cabletest") {
+            CableTestScreen(onBack = { navController.popBackStack() })
         }
 
         composable(
