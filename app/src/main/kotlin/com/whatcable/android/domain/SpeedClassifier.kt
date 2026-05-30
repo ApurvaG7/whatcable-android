@@ -2,7 +2,6 @@ package com.whatcable.android.domain
 
 import com.whatcable.android.core.model.BosCapability
 import com.whatcable.android.core.model.UsbDeviceInfo
-import com.whatcable.android.core.model.UsbPortInfo
 import com.whatcable.android.core.model.UsbSpeedTier
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -10,10 +9,7 @@ import javax.inject.Singleton
 @Singleton
 class SpeedClassifier @Inject constructor() {
 
-    fun classify(
-        devices: List<UsbDeviceInfo>,
-        portInfo: UsbPortInfo?
-    ): SpeedClassification {
+    fun classify(devices: List<UsbDeviceInfo>): SpeedClassification {
         val sources = mutableListOf<SpeedSource>()
         val candidates = mutableListOf<UsbSpeedTier>()
 

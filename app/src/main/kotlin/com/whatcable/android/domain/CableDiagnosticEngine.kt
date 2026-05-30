@@ -30,11 +30,10 @@ class CableDiagnosticEngine @Inject constructor(
     ): CableSnapshot {
         // Port status, cable e-marker, and alt-mode sysfs were root-only sources and
         // have been removed. Everything here now comes from public APIs: USB host
-        // descriptors (BOS/Billboard) and the battery broadcast. portInfo is therefore
-        // always null; the classifiers accept that and fall back to descriptor data.
-        val speed = speedClassifier.classify(devices, null)
-        val charging = chargingAnalyser.assess(null, devices)
-        val trust = trustScorer.score(devices, null, speed)
+        // descriptors (BOS/Billboard) and the battery broadcast.
+        val speed = speedClassifier.classify(devices)
+        val charging = chargingAnalyser.assess(devices)
+        val trust = trustScorer.score(devices, speed)
         val altModes = mergeAltModes(devices)
 
         return CableSnapshot(

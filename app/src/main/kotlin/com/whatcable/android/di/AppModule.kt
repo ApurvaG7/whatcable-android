@@ -30,7 +30,11 @@ object AppModule {
             context,
             WhatCableDatabase::class.java,
             "whatcable.db"
-        ).fallbackToDestructiveMigration().build()
+        )
+            // Pre-release app with disposable charging history; drop and rebuild
+            // on schema change rather than ship migrations.
+            .fallbackToDestructiveMigration(dropAllTables = true)
+            .build()
     }
 
     @Provides
