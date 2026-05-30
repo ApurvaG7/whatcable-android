@@ -69,7 +69,4 @@ dependencies {
 
     implementation(libs.coroutines.core)
     implementation(libs.coroutines.android)
-
-    compileOnly(project(":hidden-api-stub"))
-    implementation(libs.hidden.api.bypass)
 }

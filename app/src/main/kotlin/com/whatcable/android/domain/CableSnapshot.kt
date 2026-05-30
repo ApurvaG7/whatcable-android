@@ -10,7 +10,6 @@ import com.whatcable.android.core.model.UsbDeviceInfo
 import com.whatcable.android.core.model.UsbPortInfo
 import com.whatcable.android.core.model.UsbSpeedTier
 import com.whatcable.android.data.charging.ChargingState
-import com.whatcable.android.data.root.CableIdentityReader
 
 data class CableSnapshot(
     val timestamp: Long = System.currentTimeMillis(),
@@ -21,7 +20,6 @@ data class CableSnapshot(
     val connectedDevices: List<UsbDeviceInfo> = emptyList(),
     val trustScore: TrustScore = TrustScore(),
     val complianceWarnings: List<ComplianceWarning> = emptyList(),
-    val cableIdentity: CableIdentityReader.CableIdentity? = null,
     val batteryState: ChargingState? = null
 ) {
     val isConnected: Boolean

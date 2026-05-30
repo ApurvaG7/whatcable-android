@@ -4,8 +4,6 @@ import android.hardware.usb.UsbDevice
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.whatcable.android.data.charging.ChargingMonitor
-import com.whatcable.android.data.root.RootChecker
-import com.whatcable.android.data.root.SuExecutor
 import com.whatcable.android.data.usb.UsbEvent
 import com.whatcable.android.data.usb.UsbHostScanner
 import com.whatcable.android.domain.CableDiagnosticEngine
@@ -22,16 +20,13 @@ import javax.inject.Inject
 class HomeViewModel @Inject constructor(
     private val usbScanner: UsbHostScanner,
     private val chargingMonitor: ChargingMonitor,
-    private val diagnosticEngine: CableDiagnosticEngine,
-    private val rootChecker: RootChecker,
-    private val suExecutor: SuExecutor
+    private val diagnosticEngine: CableDiagnosticEngine
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(HomeUiState())
     val uiState: StateFlow<HomeUiState> = _uiState.asStateFlow()
 
     init {
-        checkRoot()
         observeUsbEvents()
         observeChargingState()
         refresh()
@@ -52,13 +47,6 @@ class HomeViewModel @Inject constructor(
         viewModelScope.launch {
             val granted = usbScanner.requestPermission(rawDevice).first()
             if (granted) refresh()
-        }
-    }
-
-    private fun checkRoot() {
-        viewModelScope.launch {
-            val hasRoot = rootChecker.isRooted && suExecutor.isAvailable()
-            _uiState.value = _uiState.value.copy(hasRoot = hasRoot)
         }
     }
 
@@ -88,6 +76,5 @@ class HomeViewModel @Inject constructor(
 
 data class HomeUiState(
     val snapshot: CableSnapshot = CableSnapshot(),
-    val hasRoot: Boolean = false,
     val isLoading: Boolean = false
 )

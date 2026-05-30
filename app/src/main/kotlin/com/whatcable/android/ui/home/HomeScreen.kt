@@ -59,7 +59,6 @@ import com.whatcable.android.core.model.ComplianceWarning
 import com.whatcable.android.core.model.PowerRole
 import com.whatcable.android.core.model.UsbDeviceInfo
 import com.whatcable.android.data.charging.ChargingState
-import com.whatcable.android.data.root.CableIdentityReader
 import com.whatcable.android.domain.AltModeInfo
 import com.whatcable.android.domain.CableReportGenerator
 import com.whatcable.android.domain.CableSnapshot
@@ -82,11 +81,6 @@ fun HomeScreen(
     viewModel: HomeViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-
-    if (!uiState.hasRoot && !uiState.isLoading) {
-        RootRequiredScreen()
-        return
-    }
 
     PullToRefreshBox(
         isRefreshing = uiState.isLoading,
@@ -207,11 +201,9 @@ private fun DashboardContent(
             item { BatteryCard(snapshot.batteryState, onClick = onChargingClick) }
         }
 
-        snapshot.cableIdentity?.let { identity ->
-            item { CableIdentityCard(identity) }
-        }
-
-        if (snapshot.trustScore.signals.isNotEmpty()) {
+        // Cable quality is derived purely from USB descriptors, so it only means
+        // something when a device is actually attached to the port.
+        if (snapshot.connectedDevices.isNotEmpty() && snapshot.trustScore.signals.isNotEmpty()) {
             item { TrustCard(snapshot.trustScore) }
         }
 
@@ -291,75 +283,6 @@ private fun HeroSection(snapshot: CableSnapshot) {
     }
 }
 
-@Composable
-private fun RootRequiredScreen() {
-    val glowBlue = Blue40
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .drawBehind {
-                drawCircle(
-                    brush = Brush.radialGradient(
-                        colors = listOf(glowBlue.copy(alpha = 0.08f), Color.Transparent),
-                        center = Offset(size.width / 2, size.height * 0.35f),
-                        radius = size.width * 0.6f
-                    ),
-                    radius = size.width * 0.6f,
-                    center = Offset(size.width / 2, size.height * 0.35f)
-                )
-            },
-        contentAlignment = Alignment.Center
-    ) {
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            modifier = Modifier.padding(48.dp)
-        ) {
-            Box(
-                modifier = Modifier
-                    .size(96.dp)
-                    .clip(CircleShape)
-                    .border(
-                        2.dp,
-                        Brush.linearGradient(listOf(Color(0xFFF87171), Color(0xFFFBBF24))),
-                        CircleShape
-                    )
-                    .background(Color(0xFFF87171).copy(alpha = 0.06f)),
-                contentAlignment = Alignment.Center
-            ) {
-                Text(
-                    text = "ROOT",
-                    fontSize = 12.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = Color(0xFFF87171),
-                    letterSpacing = 2.sp
-                )
-            }
-            Spacer(modifier = Modifier.height(32.dp))
-            Text(
-                text = "Root Required",
-                fontSize = 28.sp,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onSurface,
-                letterSpacing = (-0.5).sp
-            )
-            Spacer(modifier = Modifier.height(12.dp))
-            Text(
-                text = "WhatCable reads USB-C cable data directly from the kernel's typec subsystem. This requires root access via Magisk, KernelSU, or APatch.",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
-                textAlign = TextAlign.Center
-            )
-            Spacer(modifier = Modifier.height(24.dp))
-            Text(
-                text = "Cable identity, speed capability, orientation, alt modes, and power roles are read from /sys/class/typec/ which is only accessible with superuser permissions.",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
-                textAlign = TextAlign.Center
-            )
-        }
-    }
-}
-
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun BadgeRow(snapshot: CableSnapshot) {
@@ -379,7 +302,7 @@ private fun BadgeRow(snapshot: CableSnapshot) {
                 InfoBadge(label = "ORIENT.", value = port.orientation.label)
             }
         }
-        if (snapshot.trustScore.signals.isNotEmpty()) {
+        if (snapshot.connectedDevices.isNotEmpty() && snapshot.trustScore.signals.isNotEmpty()) {
             val ratingColor = when (snapshot.trustScore.rating) {
                 TrustRating.HIGH -> Green60
                 TrustRating.MEDIUM -> Color(0xFFFBBF24)
@@ -692,7 +615,19 @@ private fun BatteryCard(state: ChargingState, onClick: () -> Unit = {}) {
             Row(horizontalArrangement = Arrangement.spacedBy(24.dp)) {
                 MetricColumn("Temp", "%.1f°C".format(state.temperatureCelsius))
                 MetricColumn("Plug", state.plugType.label)
-                state.chargerType?.let { MetricColumn("Type", it) }
+                state.chargerClass?.let { MetricColumn("Charger", it) }
+            }
+            state.negotiatedMaxWatts?.let { maxW ->
+                Spacer(modifier = Modifier.height(8.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(24.dp)) {
+                    MetricColumn("Negotiated", "%.0fW".format(maxW))
+                    state.negotiatedMaxVoltageMv?.let {
+                        MetricColumn("Max V", "%.1fV".format(it / 1000.0))
+                    }
+                    state.negotiatedMaxCurrentMa?.let {
+                        MetricColumn("Max A", "%.1fA".format(it / 1000.0))
+                    }
+                }
             }
         }
     }
@@ -830,34 +765,6 @@ private fun ComplianceCard(warnings: List<ComplianceWarning>) {
     }
 }
 
-
-@Composable
-private fun CableIdentityCard(identity: CableIdentityReader.CableIdentity) {
-    AccentCard(accentColor = Green60) {
-        Column {
-            CardTitle("Cable Identity")
-            Spacer(modifier = Modifier.height(12.dp))
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                MetricColumn("Type", identity.cableType.label)
-                MetricColumn("USB4", if (identity.supportsUsb4) "Yes" else "No")
-                identity.maxCurrentMa?.let { MetricColumn("Max Current", "${it / 1000}A") }
-                identity.maxSpeedGbps?.let { MetricColumn("Max Speed", "${it}Gbps") }
-            }
-            if (identity.idHeader != null || identity.product != null) {
-                Spacer(modifier = Modifier.height(8.dp))
-                identity.idHeader?.let {
-                    MetricColumn("ID Header", "0x${"%08X".format(it)}")
-                }
-                identity.product?.let {
-                    MetricColumn("Product VDO", "0x${"%08X".format(it)}")
-                }
-            }
-        }
-    }
-}
 
 @Composable
 private fun DeviceCard(device: UsbDeviceInfo, onClick: () -> Unit = {}) {

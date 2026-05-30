@@ -62,7 +62,8 @@ class ChargingViewModel @Inject constructor(
                 voltageMv = state.voltageMv,
                 wattage = state.wattage,
                 temperatureTenths = state.temperatureTenths,
-                chargerType = state.chargerType
+                negotiatedMaxVoltageMv = state.negotiatedMaxVoltageMv,
+                negotiatedMaxCurrentMa = state.negotiatedMaxCurrentMa
             )
         )
 

@@ -121,7 +121,8 @@ private fun LiveStatsCard(state: ChargingState) {
                 state.voltageMv?.let { StatBox("Voltage", "${it} mV") }
                 StatBox("Temp", "${"%.1f".format(state.temperatureCelsius)} C")
                 StatBox("Plug", state.plugType.label)
-                state.chargerType?.let { StatBox("Type", it) }
+                state.chargerClass?.let { StatBox("Charger", it) }
+                state.negotiatedMaxWatts?.let { StatBox("Negotiated", "${"%.0f".format(it)}W") }
             }
         }
     }

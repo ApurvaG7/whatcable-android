@@ -12,5 +12,6 @@ data class ChargingSample(
     val voltageMv: Int?,
     val wattage: Double?,
     val temperatureTenths: Int,
-    val chargerType: String?
+    val negotiatedMaxVoltageMv: Int?,
+    val negotiatedMaxCurrentMa: Int?
 )
