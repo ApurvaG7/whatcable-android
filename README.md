@@ -24,6 +24,20 @@ apps. So WhatCable judges a cable by *outcome*: the negotiated voltage, and a
 side-by-side comparison of how much power each cable actually delivers on the
 same charger.
 
+**The harder limit: Android cannot identify a cable at all.** Unlike the macOS
+version, which reads a cable's e-marker (its declared 60/100/240W rating and
+USB 2.0/3.x/4 capability) through the host platform, a phone usually never
+interrogates the cable's e-marker in the first place. Its USB-C controller only
+runs cable discovery when it needs to (high power, alt-mode entry), so most of
+the time the cable's identity is never read into the system. That data is
+therefore unavailable to *any* app tier, not just unprivileged ones: not via the
+Play Store sandbox, not via a shell-domain helper like Shizuku, and not reliably
+even with root. The cable's own spec simply isn't there to read. Everything this
+app shows is the phone's *experience* of the cable (watts pulled, link speed
+negotiated), never the cable's declared capability. Since the phone is almost
+always the bottleneck, only a grossly bad cable shows up; a good cable and an
+adequate one look identical.
+
 For a fair comparison, test each cable on the same charger at a similar battery
 level, ideally below 50% so charging isn't throttled near full.
 
