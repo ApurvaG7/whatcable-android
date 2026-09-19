@@ -17,9 +17,13 @@ jobs:
           java-version: '17'
           distribution: 'temurin'
 
+      
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v3
-
+      
+      - name: Remove Gradle Daemon JVM lock
+        run: rm -f gradle/gradle-daemon-jvm.properties
+      
       - name: Make gradlew executable
         run: chmod +x gradlew
 
